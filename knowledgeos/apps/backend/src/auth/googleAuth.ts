@@ -14,7 +14,7 @@ const GOOGLE_CLIENT_ID = process.env['GOOGLE_CLIENT_ID'] ?? '';
 const GOOGLE_CLIENT_SECRET = process.env['GOOGLE_CLIENT_SECRET'] ?? '';
 const GOOGLE_REDIRECT_URI = process.env['GOOGLE_REDIRECT_URI'] ?? 'http://localhost:4000/auth/google/callback';
 const JWT_SECRET = process.env['JWT_SECRET'] ?? 'dev-jwt-secret-change-me';
-const JWT_EXPIRES_IN = process.env['JWT_EXPIRES_IN'] ?? '7d';
+const JWT_EXPIRES_IN_SECONDS = parseInt(process.env['JWT_EXPIRES_IN_SECONDS'] ?? '604800', 10); // 7 days
 
 /**
  * Create an OAuth2 client instance.
@@ -111,7 +111,7 @@ export async function handleGoogleCallback(code: string): Promise<{
   const token = jwt.sign(
     { userId: user.id, email: user.email },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN },
+    { expiresIn: JWT_EXPIRES_IN_SECONDS },
   );
 
   return {
