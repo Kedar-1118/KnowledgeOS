@@ -1,0 +1,29 @@
+{
+  "name": "knowledgeos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered personal knowledge management system",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:shared": "npm run build --workspace=packages/shared-types",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infra/docker-compose.yml down",
+    "docker:logs": "docker-compose -f infra/docker-compose.yml logs -f",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/backend",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/backend",
+    "prisma:studio": "npm run prisma:studio --workspace=apps/backend"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

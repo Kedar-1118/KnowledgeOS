@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build outputs
+dist/
+build/
+.next/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Prisma
+apps/backend/prisma/migrations/**/migration_lock.toml
+
+# ML Models (too large for git)
+apps/ml-service/model_cache/
+*.pt
+*.bin
+*.safetensors
+*.onnx
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+.nyc_output/
+htmlcov/
+.pytest_cache/
+
+# Misc
+*.tgz
+*.tar.gz
