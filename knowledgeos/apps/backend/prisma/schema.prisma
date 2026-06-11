@@ -1,0 +1,308 @@
+// apps/backend/prisma/schema.prisma
+// KnowledgeOS — Complete PostgreSQL Schema
+// Run: npx prisma migrate dev --name phase1_foundation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+// Enums
+// ═══════════════════════════════════════════
+
+enum FileType {
+  PDF
+  TXT
+  MD
+  IMAGE
+  VIDEO
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  INDEXED
+  FAILED
+}
+
+enum JobType {
+  PARSE
+  EMBED
+  SUMMARIZE
+  TAG
+  GRAPH_EXTRACT
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum TagAssignment {
+  AUTO
+  USER
+}
+
+enum NodeType {
+  CONCEPT
+  PERSON
+  PLACE
+  TECHNOLOGY
+  METHOD
+  OTHER
+}
+
+// ═══════════════════════════════════════════
+// Models
+// ═══════════════════════════════════════════
+
+model User {
+  id               String    @id @default(uuid())
+  googleId         String    @unique
+  email            String    @unique
+  name             String
+  avatarUrl        String?
+  driveFolderId    String?   /// The KnowledgeOS/ folder ID in Google Drive
+  driveAccessToken String?
+  driveRefreshToken String?
+  tokenExpiry      DateTime?
+  drivePageToken   String?   /// For incremental sync via Drive Changes API
+  preferences      Json      @default("{}")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  documents        Document[]
+  searchHistory    SearchHistory[]
+  knowledgeNodes   KnowledgeNode[]
+  revisionItems    RevisionItem[]
+  healthScores     KnowledgeHealthScore[]
+  clusters         Cluster[]
+
+  @@map("users")
+}
+
+model Document {
+  id               String         @id @default(uuid())
+  userId           String
+  driveFileId      String         @unique
+  driveFileUrl     String?
+  title            String
+  author           String?
+  fileName         String
+  fileType         FileType
+  mimeType         String
+  fileSizeBytes    Int
+  driveModifiedAt  DateTime
+  status           DocumentStatus @default(PENDING)
+  summary          String?
+  summaryGeneratedAt DateTime?
+  readingTimeMinutes Int?
+  lastAccessedAt   DateTime?
+  accessCount      Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks           Chunk[]
+  documentTags     DocumentTag[]
+  processingJobs   ProcessingJob[]
+  revisionItems    RevisionItem[]
+
+  // Cross-document relations (as source)
+  relationsAsSource DocumentRelation[] @relation("SourceDocument")
+  // Cross-document relations (as target)
+  relationsAsTarget DocumentRelation[] @relation("TargetDocument")
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([driveFileId])
+  @@map("documents")
+}
+
+model Chunk {
+  id             String   @id @default(uuid())
+  documentId     String
+  chunkIndex     Int
+  content        String
+  tokenCount     Int
+  qdrantPointId  String?  /// Reference to the vector in Qdrant
+  headingContext String?  /// The nearest heading above this chunk
+  pageNumber     Int?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@index([qdrantPointId])
+  @@map("chunks")
+}
+
+model Tag {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  category     String?
+  color        String?
+  createdAt    DateTime      @default(now())
+
+  // Relations
+  documentTags DocumentTag[]
+
+  @@map("tags")
+}
+
+model DocumentTag {
+  documentId String
+  tagId      String
+  confidence Float
+  assignedBy TagAssignment @default(AUTO)
+
+  // Relations
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
+  @@index([documentId])
+  @@index([tagId])
+  @@map("document_tags")
+}
+
+model KnowledgeNode {
+  id           String   @id @default(uuid())
+  userId       String
+  label        String
+  type         NodeType
+  description  String?
+  neo4jNodeId  String?  /// Reference to the node in Neo4j
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, label])
+  @@index([userId])
+  @@index([neo4jNodeId])
+  @@map("knowledge_nodes")
+}
+
+model DocumentRelation {
+  id            String   @id @default(uuid())
+  sourceDocId   String
+  targetDocId   String
+  relationType  String   /// e.g., "SIMILAR", "CONCEPT_OVERLAP", "PREREQUISITE"
+  strength      Float
+  createdAt     DateTime @default(now())
+
+  // Relations
+  sourceDocument Document @relation("SourceDocument", fields: [sourceDocId], references: [id], onDelete: Cascade)
+  targetDocument Document @relation("TargetDocument", fields: [targetDocId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceDocId, targetDocId, relationType])
+  @@index([sourceDocId])
+  @@index([targetDocId])
+  @@map("document_relations")
+}
+
+model SearchHistory {
+  id                String   @id @default(uuid())
+  userId            String
+  query             String
+  resultsCount      Int
+  clickedDocumentId String?
+  createdAt         DateTime @default(now())
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("search_history")
+}
+
+model RevisionItem {
+  id              String   @id @default(uuid())
+  userId          String
+  documentId      String
+  topicName       String
+  nextReviewAt    DateTime
+  intervalDays    Int      @default(1)
+  easeFactor      Float    @default(2.5)
+  repetitionCount Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId, topicName])
+  @@index([userId])
+  @@index([userId, nextReviewAt])
+  @@map("revision_items")
+}
+
+model KnowledgeHealthScore {
+  id             String   @id @default(uuid())
+  userId         String
+  score          Int      /// 0–100 composite score
+  coverageScore  Float    /// 0–25
+  recencyScore   Float    /// 0–25
+  gapScore       Float    /// 0–25
+  revisionScore  Float    /// 0–25
+  breakdown      Json     @default("{}")
+  calculatedAt   DateTime @default(now())
+
+  // Relations
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, calculatedAt])
+  @@map("knowledge_health_scores")
+}
+
+model ProcessingJob {
+  id          String    @id @default(uuid())
+  documentId  String
+  jobType     JobType
+  status      JobStatus @default(QUEUED)
+  attempts    Int       @default(0)
+  lastError   String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([status])
+  @@index([documentId, jobType])
+  @@map("processing_jobs")
+}
+
+model Cluster {
+  id          String   @id @default(uuid())
+  userId      String
+  label       String
+  color       String?
+  documentIds Json     @default("[]") /// Array of document IDs in this cluster
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("clusters")
+}
