@@ -1,0 +1,143 @@
+# infra/docker-compose.yml
+# KnowledgeOS — Local Development Stack
+# Usage: docker-compose -f infra/docker-compose.yml up -d
+
+services:
+  # ─── Databases ───
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: knowledgeos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: knowledgeos
+      POSTGRES_PASSWORD: knowledgeos_dev
+      POSTGRES_DB: knowledgeos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U knowledgeos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: knowledgeos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: knowledgeos-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: knowledgeos-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/knowledgeos_dev
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p knowledgeos_dev 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Application Services ───
+  # For local development, run frontend/backend/ml-service directly with npm/python.
+  # These Docker service definitions are for full-stack Docker testing.
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: knowledgeos-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql://knowledgeos:knowledgeos_dev@postgres:5432/knowledgeos?schema=public
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      NEO4J_URI: bolt://neo4j:7687
+      ML_SERVICE_URL: http://ml-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    profiles:
+      - full
+
+  ml-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.ml-service
+    container_name: knowledgeos-ml-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+    volumes:
+      - ml_model_cache:/app/model_cache
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    profiles:
+      - full
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.frontend
+    container_name: knowledgeos-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  neo4j_data:
+  neo4j_logs:
+  ml_model_cache:

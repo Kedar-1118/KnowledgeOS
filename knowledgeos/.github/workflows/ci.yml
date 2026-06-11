@@ -1,0 +1,73 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - name: Build shared types
+        run: npm run build:shared
+
+      - name: TypeScript check (backend)
+        run: npm run typecheck --workspace=apps/backend
+
+      - name: TypeScript check (frontend)
+        run: npm run typecheck --workspace=apps/frontend
+
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install ruff black
+          pip install -r apps/ml-service/requirements.txt
+
+      - name: Run Ruff
+        run: ruff check apps/ml-service/
+
+      - name: Run Black (check)
+        run: black --check apps/ml-service/
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -f infra/docker/Dockerfile.frontend -t knowledgeos-frontend .
+
+      - name: Build backend image
+        run: docker build -f infra/docker/Dockerfile.backend -t knowledgeos-backend .
+
+      - name: Build ML service image
+        run: docker build -f infra/docker/Dockerfile.ml-service -t knowledgeos-ml-service .

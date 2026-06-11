@@ -1,0 +1,25 @@
+# infra/docker/Dockerfile.backend
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy workspace config
+COPY package.json package-lock.json* ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/shared-types/package.json ./packages/shared-types/
+
+# Install dependencies
+RUN npm ci --workspace=apps/backend --workspace=packages/shared-types
+
+# Copy source
+COPY packages/shared-types/ ./packages/shared-types/
+COPY apps/backend/ ./apps/backend/
+
+# Build shared types, generate Prisma client, then build backend
+RUN npm run build --workspace=packages/shared-types
+RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
+RUN npm run build --workspace=apps/backend
+
+EXPOSE 4000
+
+# Run migrations then start
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma && node apps/backend/dist/index.js"]
