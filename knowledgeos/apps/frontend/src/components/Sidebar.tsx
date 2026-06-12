@@ -8,6 +8,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Search,
+  MessageSquare,
   Library,
   Share2,
   Sparkles,
@@ -28,6 +29,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { to: '/search', label: 'Search', icon: <Search size={18} /> },
+  { to: '/ask', label: 'Ask', icon: <MessageSquare size={18} /> },
   { to: '/library', label: 'Library', icon: <Library size={18} /> },
   { to: '/graph', label: 'Knowledge Graph', icon: <Share2 size={18} /> },
   { to: '/recommendations', label: 'Recommendations', icon: <Sparkles size={18} /> },

@@ -11,6 +11,8 @@ import { useAuthStore } from './store/authStore';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { SearchPage } from './pages/SearchPage';
+import { QAPage } from './pages/QAPage';
 
 /**
  * Auth callback handler — extracts JWT from URL params after Google OAuth redirect.
@@ -94,8 +96,9 @@ export function App() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
-        {/* Phase 2+ routes */}
-        <Route path="search" element={<PlaceholderPage title="Search" />} />
+        <Route path="search" element={<SearchPage />} />
+        <Route path="ask" element={<QAPage />} />
+        {/* Phase 3+ routes */}
         <Route path="library" element={<PlaceholderPage title="Library" />} />
         <Route path="graph" element={<PlaceholderPage title="Knowledge Graph" />} />
         <Route path="recommendations" element={<PlaceholderPage title="Recommendations" />} />

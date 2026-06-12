@@ -12,6 +12,9 @@ import morgan from 'morgan';
 
 import { authRouter } from './auth/authRoutes.js';
 import { driveRouter } from './routes/driveRoutes.js';
+import { searchRouter } from './routes/searchRoutes.js';
+import { documentRouter } from './routes/documentRoutes.js';
+import { chunkRouter } from './routes/chunkRoutes.js';
 import { initializeProcessingQueue } from './queues/processingQueue.js';
 import { startDriveWatcher } from './services/driveWatcher.js';
 import { logger } from './utils/logger.js';
@@ -76,6 +79,9 @@ app.get('/health', async (_req: Request, res: Response) => {
 
 app.use('/auth', authRouter);
 app.use('/api/drive', driveRouter);
+app.use('/api', searchRouter);
+app.use('/api/documents', documentRouter);
+app.use('/api', chunkRouter);
 
 // ─── 404 Handler ───
 
