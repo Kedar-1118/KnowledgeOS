@@ -140,8 +140,10 @@ documentRouter.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
+    const docId = req.params['id'] as string;
+
     const document = await prisma.document.findFirst({
-      where: { id: req.params['id'], userId: req.user.id },
+      where: { id: docId, userId: req.user.id },
       include: {
         documentTags: {
           include: { tag: true },
@@ -232,8 +234,10 @@ documentRouter.delete('/:id', async (req: Request, res: Response) => {
       return;
     }
 
+    const docId = req.params['id'] as string;
+
     const document = await prisma.document.findFirst({
-      where: { id: req.params['id'], userId: req.user.id },
+      where: { id: docId, userId: req.user.id },
     });
 
     if (!document) {
