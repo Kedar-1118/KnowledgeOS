@@ -15,6 +15,9 @@ import { SearchPage } from './pages/SearchPage';
 import { QAPage } from './pages/QAPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { GraphPage } from './pages/GraphPage';
+import { RecommendationsPage } from './pages/RecommendationsPage';
+import { RevisionPage } from './pages/RevisionPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 /**
  * Auth callback handler — extracts JWT from URL params after Google OAuth redirect.
@@ -100,29 +103,15 @@ export function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="ask" element={<QAPage />} />
-        {/* Phase 3+ routes */}
         <Route path="library" element={<LibraryPage />} />
         <Route path="graph" element={<GraphPage />} />
-        {/* Phase 4+ routes */}
-        <Route path="recommendations" element={<PlaceholderPage title="Recommendations" />} />
-        <Route path="revision" element={<PlaceholderPage title="Revision" />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="recommendations" element={<RecommendationsPage />} />
+        <Route path="revision" element={<RevisionPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* 404 */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
-  );
-}
-
-/**
- * Placeholder page for routes that will be built in later phases.
- */
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
-      <h1 className="text-2xl font-semibold text-text-primary mb-2">{title}</h1>
-      <p className="text-text-secondary text-sm">Coming in Phase 2+</p>
-    </div>
   );
 }

@@ -59,7 +59,7 @@ recommendationRouter.get('/', async (req: Request, res: Response) => {
       driveFileUrl: string | null;
       documentTags: Array<{
         confidence: number;
-        tag: { name: string; category: string | null; color: string };
+        tag: { name: string; category: string | null; color: string | null };
       }>;
     }> = [];
 

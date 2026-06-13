@@ -3,7 +3,7 @@
  * Spaced Repetition / Revision routes.
  * GET  /api/revision/due       → Get revision items due today
  * POST /api/revision/review    → Submit a review result (SM-2 algorithm)
- * POST /api/revision/create    → Create a revision item from a document chunk
+ * POST /api/revision/create    → Create a revision item for a document topic
  * GET  /api/revision/stats     → Get revision statistics
  */
 
@@ -34,15 +34,8 @@ revisionRouter.get('/due', async (req: Request, res: Response) => {
         nextReviewAt: { lte: new Date() },
       },
       include: {
-        chunk: {
-          select: {
-            content: true,
-            headingContext: true,
-            pageNumber: true,
-            document: {
-              select: { id: true, title: true, fileType: true },
-            },
-          },
+        document: {
+          select: { id: true, title: true, fileType: true, summary: true },
         },
       },
       orderBy: { nextReviewAt: 'asc' },
@@ -51,20 +44,17 @@ revisionRouter.get('/due', async (req: Request, res: Response) => {
 
     const formatted = dueItems.map(item => ({
       id: item.id,
-      question: item.question,
-      answer: item.answer,
-      hint: item.hint,
-      difficulty: item.difficulty,
+      topicName: item.topicName,
       easeFactor: item.easeFactor,
-      interval: item.interval,
-      repetitions: item.repetitions,
+      intervalDays: item.intervalDays,
+      repetitionCount: item.repetitionCount,
       nextReviewAt: item.nextReviewAt.toISOString(),
-      chunk: item.chunk ? {
-        content: item.chunk.content,
-        headingContext: item.chunk.headingContext,
-        pageNumber: item.chunk.pageNumber,
-        document: item.chunk.document,
-      } : null,
+      document: {
+        id: item.document.id,
+        title: item.document.title,
+        fileType: item.document.fileType,
+        summary: item.document.summary,
+      },
     }));
 
     res.json({
@@ -117,22 +107,22 @@ revisionRouter.post('/review', async (req: Request, res: Response) => {
     }
 
     // ─── SM-2 Algorithm ───
-    let { easeFactor, interval, repetitions } = item;
+    let { easeFactor, intervalDays, repetitionCount } = item;
 
     if (quality >= 3) {
       // Correct response
-      if (repetitions === 0) {
-        interval = 1; // 1 day
-      } else if (repetitions === 1) {
-        interval = 6; // 6 days
+      if (repetitionCount === 0) {
+        intervalDays = 1; // 1 day
+      } else if (repetitionCount === 1) {
+        intervalDays = 6; // 6 days
       } else {
-        interval = Math.round(interval * easeFactor);
+        intervalDays = Math.round(intervalDays * easeFactor);
       }
-      repetitions += 1;
+      repetitionCount += 1;
     } else {
       // Incorrect response — reset
-      repetitions = 0;
-      interval = 1;
+      repetitionCount = 0;
+      intervalDays = 1;
     }
 
     // Update ease factor
@@ -141,17 +131,16 @@ revisionRouter.post('/review', async (req: Request, res: Response) => {
 
     // Calculate next review date
     const nextReviewAt = new Date();
-    nextReviewAt.setDate(nextReviewAt.getDate() + interval);
+    nextReviewAt.setDate(nextReviewAt.getDate() + intervalDays);
 
     // Update the revision item
     const updated = await prisma.revisionItem.update({
       where: { id: itemId },
       data: {
         easeFactor,
-        interval,
-        repetitions,
+        intervalDays,
+        repetitionCount,
         nextReviewAt,
-        lastReviewedAt: new Date(),
       },
     });
 
@@ -160,8 +149,8 @@ revisionRouter.post('/review', async (req: Request, res: Response) => {
       data: {
         id: updated.id,
         easeFactor: updated.easeFactor,
-        interval: updated.interval,
-        repetitions: updated.repetitions,
+        intervalDays: updated.intervalDays,
+        repetitionCount: updated.repetitionCount,
         nextReviewAt: updated.nextReviewAt.toISOString(),
       },
     });
@@ -176,8 +165,8 @@ revisionRouter.post('/review', async (req: Request, res: Response) => {
 
 /**
  * POST /api/revision/create
- * Create a new revision item from a document chunk.
- * Body: { chunkId: string, question: string, answer: string, hint?: string }
+ * Create a new revision item for a document topic.
+ * Body: { documentId: string, topicName: string }
  */
 revisionRouter.post('/create', async (req: Request, res: Response) => {
   try {
@@ -186,33 +175,28 @@ revisionRouter.post('/create', async (req: Request, res: Response) => {
       return;
     }
 
-    const { chunkId, question, answer, hint } = req.body as {
-      chunkId: string;
-      question: string;
-      answer: string;
-      hint?: string;
+    const { documentId, topicName } = req.body as {
+      documentId: string;
+      topicName: string;
     };
 
-    if (!chunkId || !question || !answer) {
+    if (!documentId || !topicName) {
       res.status(400).json({
         success: false,
-        error: { code: 'INVALID_INPUT', message: 'chunkId, question, and answer are required' },
+        error: { code: 'INVALID_INPUT', message: 'documentId and topicName are required' },
       });
       return;
     }
 
-    // Verify chunk belongs to user's document
-    const chunk = await prisma.chunk.findFirst({
-      where: {
-        id: chunkId,
-        document: { userId: req.user.id },
-      },
+    // Verify document belongs to user
+    const document = await prisma.document.findFirst({
+      where: { id: documentId, userId: req.user.id },
     });
 
-    if (!chunk) {
+    if (!document) {
       res.status(404).json({
         success: false,
-        error: { code: 'NOT_FOUND', message: 'Chunk not found' },
+        error: { code: 'NOT_FOUND', message: 'Document not found' },
       });
       return;
     }
@@ -220,14 +204,11 @@ revisionRouter.post('/create', async (req: Request, res: Response) => {
     const revisionItem = await prisma.revisionItem.create({
       data: {
         userId: req.user.id,
-        chunkId,
-        question,
-        answer,
-        hint: hint ?? null,
-        difficulty: 'MEDIUM',
+        documentId,
+        topicName,
         easeFactor: 2.5,
-        interval: 1,
-        repetitions: 0,
+        intervalDays: 1,
+        repetitionCount: 0,
         nextReviewAt: new Date(), // Due immediately
       },
     });
@@ -264,7 +245,7 @@ revisionRouter.get('/stats', async (req: Request, res: Response) => {
         where: { userId: req.user.id, nextReviewAt: { lte: now } },
       }),
       prisma.revisionItem.count({
-        where: { userId: req.user.id, repetitions: { gte: 5 } },
+        where: { userId: req.user.id, repetitionCount: { gte: 5 } },
       }),
       prisma.revisionItem.aggregate({
         where: { userId: req.user.id },
