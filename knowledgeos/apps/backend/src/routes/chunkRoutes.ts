@@ -30,8 +30,10 @@ chunkRouter.get('/documents/:id/chunks', async (req: Request, res: Response) => 
     }
 
     // Verify document belongs to user
+    const docId = req.params['id'] as string;
+
     const document = await prisma.document.findFirst({
-      where: { id: req.params['id'], userId: req.user.id },
+      where: { id: docId, userId: req.user.id },
       select: { id: true, title: true },
     });
 

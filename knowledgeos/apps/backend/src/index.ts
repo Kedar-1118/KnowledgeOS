@@ -15,6 +15,7 @@ import { driveRouter } from './routes/driveRoutes.js';
 import { searchRouter } from './routes/searchRoutes.js';
 import { documentRouter } from './routes/documentRoutes.js';
 import { chunkRouter } from './routes/chunkRoutes.js';
+import { graphRouter } from './routes/graphRoutes.js';
 import { initializeProcessingQueue } from './queues/processingQueue.js';
 import { startDriveWatcher } from './services/driveWatcher.js';
 import { logger } from './utils/logger.js';
@@ -82,6 +83,7 @@ app.use('/api/drive', driveRouter);
 app.use('/api', searchRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api', chunkRouter);
+app.use('/api/graph', graphRouter);
 
 // ─── 404 Handler ───
 

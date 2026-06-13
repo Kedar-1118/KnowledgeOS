@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SearchPage } from './pages/SearchPage';
 import { QAPage } from './pages/QAPage';
+import { LibraryPage } from './pages/LibraryPage';
+import { GraphPage } from './pages/GraphPage';
 
 /**
  * Auth callback handler — extracts JWT from URL params after Google OAuth redirect.
@@ -99,8 +101,9 @@ export function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="ask" element={<QAPage />} />
         {/* Phase 3+ routes */}
-        <Route path="library" element={<PlaceholderPage title="Library" />} />
-        <Route path="graph" element={<PlaceholderPage title="Knowledge Graph" />} />
+        <Route path="library" element={<LibraryPage />} />
+        <Route path="graph" element={<GraphPage />} />
+        {/* Phase 4+ routes */}
         <Route path="recommendations" element={<PlaceholderPage title="Recommendations" />} />
         <Route path="revision" element={<PlaceholderPage title="Revision" />} />
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
