@@ -21,6 +21,7 @@ import {
   Clock3,
   ArrowRight,
   TrendingUp,
+  ExternalLink,
 } from 'lucide-react';
 
 import { api } from '../lib/api';
@@ -29,6 +30,8 @@ import { useAuthStore } from '../store/authStore';
 interface SyncStatus {
   isRunning: boolean;
   lastSyncAt: string | null;
+  driveFolderId?: string | null;
+  driveFolderUrl?: string | null;
   documents: {
     total: number;
     pending: number;
@@ -97,6 +100,17 @@ export function DashboardPage() {
             <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
               Your semantic repository is active. New documents uploaded to Google Drive will be automatically scanned, broken into context nodes, and indexed for semantic extraction.
             </p>
+            {syncStatus?.driveFolderUrl && (
+              <a
+                href={syncStatus.driveFolderUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-accent-teal hover:text-accent-teal/80 underline font-bold mt-2 cursor-pointer"
+              >
+                <ExternalLink size={12} />
+                Open your KnowledgeOS folder in Google Drive
+              </a>
+            )}
           </div>
 
           <button

@@ -30,7 +30,6 @@ async function runSyncCycle(): Promise<void> {
     const users = await prisma.user.findMany({
       where: {
         driveAccessToken: { not: null },
-        driveFolderId: { not: null },
       },
       select: { id: true, email: true },
     });

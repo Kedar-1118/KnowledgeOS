@@ -18,6 +18,7 @@ import {
   AlertCircle,
   HelpCircle,
   Check,
+  ExternalLink,
 } from 'lucide-react';
 
 import { api } from '../lib/api';
@@ -26,6 +27,8 @@ import { useAuthStore } from '../store/authStore';
 interface SyncStatus {
   isRunning: boolean;
   lastSyncAt: string | null;
+  driveFolderId?: string | null;
+  driveFolderUrl?: string | null;
   documents: {
     total: number;
     indexed: number;
@@ -192,6 +195,17 @@ export function SettingsPage() {
                   <p className="text-[11px] text-text-secondary leading-relaxed">
                     The platform scans only the document catalog located under the <code className="px-1.5 py-0.5 rounded bg-accent-purple/10 border border-accent-purple/20 text-accent-purple font-mono text-[10px]">KnowledgeOS/</code> root workspace folder inside Google Drive.
                   </p>
+                  {syncStatus?.driveFolderUrl && (
+                    <a
+                      href={syncStatus.driveFolderUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-accent-teal hover:text-accent-teal/80 underline font-bold mt-3 cursor-pointer"
+                    >
+                      <ExternalLink size={12} />
+                      Open KnowledgeOS folder
+                    </a>
+                  )}
                 </div>
                 <div className="text-[10px] text-text-muted flex items-center gap-1.5 mt-4">
                   <Shield size={12} className="text-accent-teal" /> Read-only sync credentials.

@@ -22,7 +22,7 @@ from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
 router = APIRouter()
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 SYSTEM_PROMPT = """You are a personal knowledge assistant for KnowledgeOS. Answer ONLY using the \
 provided context from the user's documents. If the answer is not in the context, say so clearly. \
@@ -80,24 +80,25 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
     context = "\n\n".join(context_parts)
 
     # Step 3: Call LLM
-    if ANTHROPIC_API_KEY:
-        # Use Anthropic Claude
+    if GEMINI_API_KEY:
+        # Use Google Gemini via OpenAI-compatible endpoint
         try:
             import httpx
 
             async with httpx.AsyncClient(timeout=60.0) as http_client:
                 response = await http_client.post(
-                    "https://api.anthropic.com/v1/messages",
+                    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
                     headers={
-                        "x-api-key": ANTHROPIC_API_KEY,
-                        "anthropic-version": "2023-06-01",
+                        "Authorization": f"Bearer {GEMINI_API_KEY}",
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-3-5-sonnet-20241022",
-                        "max_tokens": 1024,
-                        "system": SYSTEM_PROMPT,
+                        "model": "gemini-2.5-flash",
                         "messages": [
+                            {
+                                "role": "system",
+                                "content": SYSTEM_PROMPT,
+                            },
                             {
                                 "role": "user",
                                 "content": f"Context:\n{context}\n\nQuestion: {question}",
@@ -109,14 +110,15 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
 
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
-                        data = line[6:]
+                        data = line[6:].strip()
                         if data == "[DONE]":
                             break
                         try:
                             event = json.loads(data)
-                            if event.get("type") == "content_block_delta":
-                                delta = event.get("delta", {})
-                                text = delta.get("text", "")
+                            choices = event.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                text = delta.get("content", "")
                                 if text:
                                     chunk_data = json.dumps({"answer_chunk": text})
                                     yield f"data: {chunk_data}\n\n"
@@ -124,14 +126,14 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
                             continue
 
         except Exception as e:
-            logger.error(f"Anthropic API call failed: {e}")
+            logger.error(f"Gemini API call failed: {e}")
             # Fall back to context-based response
             fallback = _generate_fallback_response(question, context_parts)
             chunk_data = json.dumps({"answer_chunk": fallback})
             yield f"data: {chunk_data}\n\n"
     else:
         # No API key — generate a context-based response without LLM
-        logger.info("No ANTHROPIC_API_KEY set, using fallback response")
+        logger.info("No GEMINI_API_KEY set, using fallback response")
         fallback = _generate_fallback_response(question, context_parts)
         chunk_data = json.dumps({"answer_chunk": fallback})
         yield f"data: {chunk_data}\n\n"
@@ -163,7 +165,7 @@ def _generate_fallback_response(question: str, context_parts: list[str]) -> str:
         response_parts.append(f"• {part}\n\n")
 
     response_parts.append(
-        "\n*Note: For more detailed AI-powered answers, configure your ANTHROPIC_API_KEY "
+        "\n*Note: For more detailed AI-powered answers, configure your GEMINI_API_KEY "
         "in the environment variables.*"
     )
 
