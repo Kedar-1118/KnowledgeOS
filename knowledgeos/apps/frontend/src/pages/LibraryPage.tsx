@@ -57,6 +57,62 @@ export function LibraryPage() {
 
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadProgress(0);
+      
+      // 1. Init Upload
+      const initRes = await api.post<{ success: boolean; data: { uploadUrl: string; tempFileId: string } }>(
+        '/api/drive/upload/init',
+        { fileName: file.name, mimeType: file.type || 'application/octet-stream', fileSizeBytes: file.size }
+      );
+      
+      const { uploadUrl, tempFileId } = initRes.data.data;
+
+      // 2. Direct PUT to Drive
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl, true);
+        
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = async () => {
+          if (xhr.status === 200 || xhr.status === 201 || xhr.status === 308) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        
+        xhr.send(file);
+      });
+
+      setUploadProgress(100);
+
+      // 3. Complete Upload
+      await api.post('/api/drive/upload/complete', { fileId: tempFileId });
+      
+      // Invalidate and reset
+      void queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setUploadProgress(null);
+      event.target.value = ''; // Reset input
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadProgress(null);
+      alert('Upload failed. Please try again.');
+    }
+  };
 
   // ─── Query: Fetch Documents ───
   const { data, isLoading } = useQuery<ListResponse>({
@@ -89,6 +145,16 @@ export function LibraryPage() {
     },
   });
 
+  // ─── Mutation: Generate Flashcards ───
+  const generateCardsMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      await api.post(`/api/revision/generate/${docId}`);
+    },
+    onSuccess: () => {
+      alert('Flashcard generation started in the background. They will appear in your Revision deck shortly.');
+    },
+  });
+
   const { pagination } = data ?? { pagination: { page: 1, limit: 12, total: 0, totalPages: 0 } };
 
   return (
@@ -103,6 +169,19 @@ export function LibraryPage() {
             <p className="text-on-surface-variant max-w-lg text-xs">Manage your indexed datasets and ingest new knowledge sources into the Nexus AI neural network.</p>
           </div>
           <div className="flex gap-2">
+            {/* Upload Button */}
+            {uploadProgress !== null && (
+              <div className="flex items-center gap-2 mr-2 text-xs font-bold text-primary">
+                <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>
+                {uploadProgress}%
+              </div>
+            )}
+            <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all font-bold text-xs mr-2">
+              <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+              Upload
+              <input type="file" className="hidden" onChange={handleFileUpload} />
+            </label>
+
             {/* View Mode Switches */}
             <div className="flex items-center gap-1.5 bg-surface/50 border border-outline-variant rounded-lg p-0.5 mr-2">
               <button
@@ -474,15 +553,25 @@ export function LibraryPage() {
             </div>
 
             {/* Actions Panel */}
-            <div className="pt-lg border-t border-outline-variant flex gap-3">
-              {selectedDoc.driveFileUrl && (
-                <button 
-                  onClick={() => window.open(selectedDoc.driveFileUrl!, '_blank')}
-                  className="flex-1 bg-surface-container-highest text-on-surface font-bold py-2 rounded border border-outline-variant hover:bg-white/5 transition-all text-xs cursor-pointer"
-                >
-                  View Source
-                </button>
-              )}
+            <div className="pt-lg border-t border-outline-variant flex flex-col gap-3">
+              <button 
+                onClick={() => generateCardsMutation.mutate(selectedDoc.id)}
+                disabled={generateCardsMutation.isPending}
+                className="w-full bg-primary/20 text-primary font-bold py-2 rounded border border-primary/30 hover:bg-primary/30 transition-all text-xs cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">style</span>
+                {generateCardsMutation.isPending ? 'Generating...' : 'Generate Flashcards'}
+              </button>
+              
+              <div className="flex gap-3">
+                {selectedDoc.driveFileUrl && (
+                  <button 
+                    onClick={() => window.open(selectedDoc.driveFileUrl!, '_blank')}
+                    className="flex-1 bg-surface-container-highest text-on-surface font-bold py-2 rounded border border-outline-variant hover:bg-white/5 transition-all text-xs cursor-pointer"
+                  >
+                    View Source
+                  </button>
+                )}
               {deleteConfirmId === selectedDoc.id ? (
                 <div className="flex-1 flex gap-2">
                   <button

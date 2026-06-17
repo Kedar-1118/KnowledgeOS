@@ -30,3 +30,6 @@ apscheduler>=3.10.4
 
 # Logging
 loguru>=0.7.3
+
+# AI APIs
+google-generativeai>=0.8.0

@@ -8,7 +8,8 @@
 import { Router, type Request, type Response } from 'express';
 
 import { jwtMiddleware } from '../auth/jwtMiddleware.js';
-import { syncDriveFolder } from '../services/driveSync.js';
+import { syncDriveFolder, getDriveClient, findOrCreateKnowledgeFolder } from '../services/driveSync.js';
+import { enqueueDocumentProcessing } from '../queues/processingQueue.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
 
@@ -53,6 +54,82 @@ driveRouter.post('/sync-now', async (req: Request, res: Response) => {
         message: error instanceof Error ? error.message : 'Drive sync failed',
       },
     });
+  }
+});
+
+/**
+ * POST /api/drive/upload/init
+ * Initialize a resumable upload session to Google Drive
+ */
+driveRouter.post('/upload/init', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
+      return;
+    }
+
+    const { fileName, mimeType } = req.body;
+    if (!fileName || !mimeType) {
+      res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'fileName and mimeType required' } });
+      return;
+    }
+
+    logger.info(`Init upload for ${fileName} by ${req.user.email}`);
+    
+    const drive = await getDriveClient(req.user.id);
+    const folderId = await findOrCreateKnowledgeFolder(drive, req.user.id);
+
+    const response = await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [folderId],
+      },
+      media: { mimeType },
+      fields: 'id',
+    }, {
+      options: { url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable' }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        uploadUrl: response.headers.location,
+        tempFileId: response.data.id,
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to init upload:', error);
+    res.status(500).json({ success: false, error: { code: 'UPLOAD_INIT_FAILED', message: 'Failed to initialize upload' } });
+  }
+});
+
+/**
+ * POST /api/drive/upload/complete
+ * Trigger sync processing after upload is complete
+ */
+driveRouter.post('/upload/complete', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
+      return;
+    }
+
+    const { fileId } = req.body;
+    if (!fileId) {
+      res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'fileId required' } });
+      return;
+    }
+
+    logger.info(`Completing upload for fileId ${fileId} by ${req.user.email}`);
+
+    // Call sync function to let it pick up the new file and enqueue jobs
+    // In a more optimized version, we'd directly create the document and enqueue
+    const result = await syncDriveFolder(req.user.id);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('Failed to complete upload:', error);
+    res.status(500).json({ success: false, error: { code: 'UPLOAD_COMPLETE_FAILED', message: 'Failed to complete upload' } });
   }
 });
 

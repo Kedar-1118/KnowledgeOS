@@ -61,6 +61,15 @@ export const graphExtractQueue = new Bull('graph-extract', REDIS_URL, {
   },
 });
 
+export const generateCardsQueue = new Bull('generate-cards', REDIS_URL, {
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: 100,
+    removeOnFail: 200,
+  },
+});
+
 // ─── Job Data Types ───
 
 export interface ParseJobData {
@@ -85,6 +94,11 @@ export interface TagJobData {
 }
 
 export interface GraphExtractJobData {
+  documentId: string;
+  userId: string;
+}
+
+export interface GenerateCardsJobData {
   documentId: string;
   userId: string;
 }
@@ -168,6 +182,7 @@ export async function initializeProcessingQueue(): Promise<void> {
     { name: 'summarize', queue: summarizeQueue },
     { name: 'tag', queue: tagQueue },
     { name: 'graph-extract', queue: graphExtractQueue },
+    { name: 'generate-cards', queue: generateCardsQueue },
   ];
 
   for (const { name, queue } of queues) {

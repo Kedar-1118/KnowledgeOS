@@ -60,6 +60,13 @@ enum NodeType {
   OTHER
 }
 
+enum CardType {
+  QA
+  DEFINITION
+  FILL_BLANK
+  CONCEPT
+}
+
 // ═══════════════════════════════════════════
 // Models
 // ═══════════════════════════════════════════
@@ -236,6 +243,14 @@ model RevisionItem {
   userId          String
   documentId      String
   topicName       String
+  
+  // Flashcard specific fields
+  cardType        CardType @default(QA)
+  question        String?
+  answer          String?
+  sourceChunkId   String?
+  difficultyScore Int      @default(3)
+
   nextReviewAt    DateTime
   intervalDays    Int      @default(1)
   easeFactor      Float    @default(2.5)
@@ -247,7 +262,7 @@ model RevisionItem {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, documentId, topicName])
+  @@unique([userId, documentId, topicName, question])
   @@index([userId])
   @@index([userId, nextReviewAt])
   @@map("revision_items")

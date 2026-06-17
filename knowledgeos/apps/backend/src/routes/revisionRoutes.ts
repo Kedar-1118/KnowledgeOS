@@ -12,6 +12,7 @@ import { Router, type Request, type Response } from 'express';
 import { jwtMiddleware } from '../auth/jwtMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
+import { generateCardsQueue } from '../queues/processingQueue.js';
 
 export const revisionRouter = Router();
 
@@ -222,6 +223,52 @@ revisionRouter.post('/create', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: { code: 'CREATE_FAILED', message: 'Failed to create revision item' },
+    });
+  }
+});
+
+/**
+ * POST /api/revision/generate/:documentId
+ * Trigger AI generation of flashcards for a specific document.
+ */
+revisionRouter.post('/generate/:documentId', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+
+    const { documentId } = req.params;
+
+    if (!documentId) {
+      res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'documentId required' } });
+      return;
+    }
+
+    // Verify document belongs to user
+    const document = await prisma.document.findFirst({
+      where: { id: documentId, userId: req.user.id },
+    });
+
+    if (!document) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found' } });
+      return;
+    }
+
+    // Enqueue generation job
+    await generateCardsQueue.add({
+      documentId,
+      userId: req.user.id,
+    }, {
+      jobId: `generate-cards-${documentId}-${Date.now()}` // Allow multiple generations
+    });
+
+    res.json({ success: true, message: 'Flashcard generation started' });
+  } catch (error) {
+    logger.error('Generate cards failed:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'GENERATE_FAILED', message: 'Failed to trigger card generation' },
     });
   }
 });

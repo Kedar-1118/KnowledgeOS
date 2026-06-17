@@ -25,12 +25,14 @@ import {
   summarizeQueue,
   tagQueue,
   graphExtractQueue,
+  generateCardsQueue,
   forceAddToQueue,
   type ParseJobData,
   type EmbedJobData,
   type SummarizeJobData,
   type TagJobData,
   type GraphExtractJobData,
+  type GenerateCardsJobData,
 } from './processingQueue.js';
 
 const ML_SERVICE_URL = process.env['ML_SERVICE_URL'] ?? 'http://localhost:8000';
@@ -447,6 +449,88 @@ export function registerJobWorkers(): void {
         data: { status: 'INDEXED' },
       });
 
+      throw error;
+    }
+  });
+
+  // ─── GENERATE_CARDS Worker ───
+  generateCardsQueue.process(2, async (job: Job<GenerateCardsJobData>) => {
+    const { documentId, userId } = job.data;
+    logger.info(`[GENERATE_CARDS] Starting for document ${documentId}`);
+
+    try {
+      // Fetch some chunks for this document
+      const chunks = await prisma.chunk.findMany({
+        where: { documentId },
+        select: { id: true, content: true },
+        orderBy: { chunkIndex: 'asc' },
+        take: 10, // Limit to 10 chunks to avoid massive payloads
+      });
+
+      if (chunks.length === 0) return { cardsGenerated: 0 };
+
+      // Call ML service
+      const response = await axios.post(`${ML_SERVICE_URL}/ml/generate-cards`, {
+        chunks: chunks.map(c => ({ id: c.id, content: c.content })),
+        userId,
+        documentId,
+      });
+
+      const cards = response.data?.cards as Array<{
+        cardType: string;
+        question: string;
+        answer: string;
+        sourceChunkId: string;
+        difficultyScore: number;
+      }> | undefined;
+
+      if (cards && cards.length > 0) {
+        // Find document title to use as topicName if not provided
+        const document = await prisma.document.findUnique({
+          where: { id: documentId },
+          select: { title: true },
+        });
+
+        const topicName = document?.title || 'General';
+
+        for (const card of cards) {
+          const type = card.cardType === 'DEFINITION' || card.cardType === 'FILL_BLANK' || card.cardType === 'CONCEPT' 
+            ? card.cardType 
+            : 'QA';
+
+          await prisma.revisionItem.upsert({
+            where: {
+              userId_documentId_topicName_question: {
+                userId,
+                documentId,
+                topicName,
+                question: sanitizeString(card.question) || '',
+              }
+            },
+            update: {},
+            create: {
+              userId,
+              documentId,
+              topicName,
+              cardType: type as any,
+              question: sanitizeString(card.question),
+              answer: sanitizeString(card.answer),
+              sourceChunkId: card.sourceChunkId,
+              difficultyScore: card.difficultyScore || 3,
+              easeFactor: 2.5,
+              intervalDays: 1,
+              repetitionCount: 0,
+              nextReviewAt: new Date(),
+            },
+          });
+        }
+      }
+
+      logger.info(`[GENERATE_CARDS] Finished for document ${documentId}, generated ${cards?.length || 0} cards`);
+      return { cardsGenerated: cards?.length ?? 0 };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Generate cards failed';
+      logger.error(`[GENERATE_CARDS] Failed for document ${documentId}:`, errMsg);
       throw error;
     }
   });

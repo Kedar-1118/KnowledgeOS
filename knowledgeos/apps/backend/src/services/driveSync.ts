@@ -68,7 +68,7 @@ async function withRetry<T>(
  * Get an authenticated Drive API client for a user.
  * Automatically refreshes expired tokens.
  */
-async function getDriveClient(userId: string): Promise<drive_v3.Drive> {
+export async function getDriveClient(userId: string): Promise<drive_v3.Drive> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -105,7 +105,7 @@ async function getDriveClient(userId: string): Promise<drive_v3.Drive> {
  * Find or create the KnowledgeOS/ folder in the user's Drive.
  * Returns the folder ID.
  */
-async function findOrCreateKnowledgeFolder(
+export async function findOrCreateKnowledgeFolder(
   drive: drive_v3.Drive,
   userId: string,
 ): Promise<string> {

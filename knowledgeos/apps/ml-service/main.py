@@ -132,7 +132,7 @@ async def health_check() -> HealthResponse:
 
 
 # ─── Mount Routers ───
-from routers import embed, summarize, tag, entities, search, qa  # noqa: E402
+from routers import embed, summarize, tag, entities, search, qa, cards  # noqa: E402
 
 app.include_router(embed.router, prefix="/ml", tags=["Embedding"])
 app.include_router(summarize.router, prefix="/ml", tags=["Summarization"])
@@ -140,6 +140,7 @@ app.include_router(tag.router, prefix="/ml", tags=["Tagging"])
 app.include_router(entities.router, prefix="/ml", tags=["Entities"])
 app.include_router(search.router, prefix="/ml", tags=["Search"])
 app.include_router(qa.router, prefix="/ml", tags=["Q&A"])
+app.include_router(cards.router, prefix="/ml", tags=["Cards"])
 
 if __name__ == "__main__":
     import uvicorn
