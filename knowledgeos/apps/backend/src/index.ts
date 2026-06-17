@@ -4,6 +4,8 @@
  * Entry point: sets up middleware, routes, error handling, and graceful shutdown.
  */
 
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { type NextFunction, type Request, type Response } from 'express';
@@ -76,6 +78,19 @@ app.get('/health', async (_req: Request, res: Response) => {
     uptime: startTime,
     dependencies: checks,
   });
+});
+
+// ─── Status Page ───
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const isDist = __dirname.endsWith('dist');
+const statusPagePath = isDist
+  ? path.resolve(__dirname, '../src/public/status.html')
+  : path.resolve(__dirname, 'public/status.html');
+
+app.get('/status', (_req: Request, res: Response) => {
+  res.sendFile(statusPagePath);
 });
 
 // ─── Routes ───

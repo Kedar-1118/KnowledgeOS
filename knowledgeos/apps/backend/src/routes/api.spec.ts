@@ -46,6 +46,16 @@ describe('API Router Integration Tests', () => {
     });
   });
 
+  describe('GET /status', () => {
+    it('should successfully return the status HTML page', async () => {
+      const res = await request(app).get('/status');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/html');
+      expect(res.text).toContain('<!DOCTYPE html>');
+      expect(res.text).toContain('System Status | KnowledgeOS');
+    });
+  });
+
   describe('Protected Workspace Endpoints Auth checks', () => {
     it('should reject GET /api/documents without token with 401', async () => {
       const res = await request(app).get('/api/documents');

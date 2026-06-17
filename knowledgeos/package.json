@@ -8,9 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:frontend": "npm run dev --workspace=apps/frontend_rebuilt",
+    "dev:frontend_old": "npm run dev --workspace=apps/frontend",
     "dev:backend": "npm run dev --workspace=apps/backend",
-    "build:frontend": "npm run build --workspace=apps/frontend",
+    "dev:ml": "apps\\ml-service\\venv\\Scripts\\python.exe apps/ml-service/main.py",
+    "build:frontend": "npm run build --workspace=apps/frontend_rebuilt",
+    "build:frontend_old": "npm run build --workspace=apps/frontend",
     "build:backend": "npm run build --workspace=apps/backend",
     "build:shared": "npm run build --workspace=packages/shared-types",
     "lint": "npm run lint --workspaces --if-present",
