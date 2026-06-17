@@ -253,13 +253,13 @@ revisionRouter.get('/stats', async (req: Request, res: Response) => {
       }),
     ]);
 
-    // Items due in next 7 days
+    // Items due in next 7 days (including those due now)
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
     const dueThisWeek = await prisma.revisionItem.count({
       where: {
         userId: req.user.id,
-        nextReviewAt: { lte: nextWeek, gt: now },
+        nextReviewAt: { lte: nextWeek },
       },
     });
 

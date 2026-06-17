@@ -104,11 +104,16 @@ export async function enqueueDocumentProcessing(
   // Create all ProcessingJob records
   const jobTypes = ['PARSE', 'EMBED', 'SUMMARIZE', 'TAG', 'GRAPH_EXTRACT'] as const;
 
+  // Clear existing processing jobs to reset status tracking
+  await prisma.processingJob.deleteMany({
+    where: { documentId },
+  });
+
   await prisma.processingJob.createMany({
     data: jobTypes.map(jobType => ({
       documentId,
       jobType,
-      status: jobType === 'PARSE' ? 'QUEUED' : 'QUEUED',
+      status: 'QUEUED',
     })),
     skipDuplicates: true,
   });

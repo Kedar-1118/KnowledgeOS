@@ -190,3 +190,5 @@ class QASource(BaseModel):
     title: str
     page: int | None = None
     snippet: str
+
+    model_config = {"populate_by_name": True}

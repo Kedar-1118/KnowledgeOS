@@ -28,25 +28,44 @@ graphRouter.get('/nodes', async (req: Request, res: Response) => {
       return;
     }
 
-    const nodes = await prisma.knowledgeNode.findMany({
-      where: { userId: req.user.id },
-      select: {
-        id: true,
-        label: true,
-        type: true,
-        description: true,
-        createdAt: true,
-      },
-    });
+    const [nodes, documents] = await Promise.all([
+      prisma.knowledgeNode.findMany({
+        where: { userId: req.user.id },
+        select: {
+          id: true,
+          label: true,
+          type: true,
+          description: true,
+        },
+      }),
+      prisma.document.findMany({
+        where: { userId: req.user.id, status: 'INDEXED' },
+        select: {
+          id: true,
+          title: true,
+          summary: true,
+        },
+      }),
+    ]);
 
     // Build node objects for the graph visualization
-    const graphNodes = nodes.map(node => ({
+    const conceptNodes = nodes.map(node => ({
       id: node.id,
       label: node.label,
       type: node.type,
       description: node.description,
-      size: 1, // Will be weighted by number of connections
+      size: 1,
     }));
+
+    const documentNodes = documents.map(doc => ({
+      id: doc.id,
+      label: doc.title,
+      type: 'OTHER',
+      description: doc.summary ?? 'No summary available.',
+      size: 2,
+    }));
+
+    const graphNodes = [...conceptNodes, ...documentNodes];
 
     res.json({
       success: true,
@@ -135,7 +154,52 @@ graphRouter.get('/edges', async (req: Request, res: Response) => {
       }
     }
 
-    // Combine direct relations and shared-tag edges
+    // Get concept-to-document edges dynamically
+    const [knowledgeNodes, chunks] = await Promise.all([
+      prisma.knowledgeNode.findMany({
+        where: { userId: req.user.id },
+        select: { id: true, label: true },
+      }),
+      prisma.chunk.findMany({
+        where: { document: { userId: req.user.id, status: 'INDEXED' } },
+        select: { documentId: true, content: true },
+      }),
+    ]);
+
+    // Group chunk text by document
+    const docTexts = new Map<string, string>();
+    for (const chunk of chunks) {
+      const existing = docTexts.get(chunk.documentId) ?? '';
+      docTexts.set(chunk.documentId, existing + ' ' + chunk.content);
+    }
+
+    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const conceptEdges: Array<{
+      source: string;
+      target: string;
+      type: string;
+      strength: number;
+      label: string;
+    }> = [];
+
+    for (const node of knowledgeNodes) {
+      const escaped = escapeRegExp(node.label);
+      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      for (const [docId, text] of docTexts.entries()) {
+        if (regex.test(text)) {
+          conceptEdges.push({
+            source: node.id,
+            target: docId,
+            type: 'CONCEPT_LINK',
+            strength: 0.8,
+            label: 'MENTIONS',
+          });
+        }
+      }
+    }
+
+    // Combine direct relations, shared-tag edges, and concept edges
     const edges = [
       ...relations.map(r => ({
         source: r.sourceDocId,
@@ -147,6 +211,7 @@ graphRouter.get('/edges', async (req: Request, res: Response) => {
         targetTitle: r.targetDocument.title,
       })),
       ...sharedTagEdges,
+      ...conceptEdges,
     ];
 
     res.json({

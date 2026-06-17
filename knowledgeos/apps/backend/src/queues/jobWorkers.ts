@@ -91,6 +91,10 @@ export function registerJobWorkers(): void {
       logger.info(`[PARSE] Parsed ${document.fileName}: ${parseResult.chunks.length} chunks, ${parseResult.totalTokens} tokens`);
 
       // Save chunks to database
+      await prisma.chunk.deleteMany({
+        where: { documentId },
+      });
+
       if (parseResult.chunks.length > 0) {
         await prisma.chunk.createMany({
           data: parseResult.chunks.map((chunk, index) => ({
@@ -299,6 +303,14 @@ export function registerJobWorkers(): void {
 
       // Upsert tags and create document-tag associations
       if (tags) {
+        // Delete existing AUTO tags for this document first to avoid stale tags
+        await prisma.documentTag.deleteMany({
+          where: {
+            documentId,
+            assignedBy: 'AUTO',
+          },
+        });
+
         for (const tag of tags) {
           const tagRecord = await prisma.tag.upsert({
             where: { name: tag.label },

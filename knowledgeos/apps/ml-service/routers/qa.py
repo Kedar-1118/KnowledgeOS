@@ -94,7 +94,7 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-sonnet-4-20250514",
+                        "model": "claude-3-5-sonnet-20241022",
                         "max_tokens": 1024,
                         "system": SYSTEM_PROMPT,
                         "messages": [
