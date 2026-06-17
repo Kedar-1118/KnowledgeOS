@@ -39,15 +39,16 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
     client = get_qdrant_client()
 
     try:
-        search_results = client.search(
+        response = client.query_points(
             collection_name=collection_name,
-            query_vector=query_embedding.tolist(),
+            query=query_embedding.tolist(),
             query_filter=Filter(
                 must=[FieldCondition(key="userId", match=MatchValue(value=user_id))]
             ),
             limit=top_k,
             with_payload=True,
         )
+        search_results = response.points
     except Exception as e:
         logger.warning(f"Qdrant search failed for QA: {e}")
         error_data = json.dumps({"error": "No documents indexed yet. Please sync your Drive first."})

@@ -76,13 +76,14 @@ async def search(request: SearchRequest) -> SearchResponse:
         search_limit = min(request.top_k * 3, 50)
 
         try:
-            search_results = client.search(
+            response = client.query_points(
                 collection_name=collection_name,
-                query_vector=query_embedding.tolist(),
+                query=query_embedding.tolist(),
                 query_filter=qdrant_filter,
                 limit=search_limit,
                 with_payload=True,
             )
+            search_results = response.points
         except Exception as e:
             # Collection might not exist yet
             logger.warning(f"Qdrant search failed (collection may not exist): {e}")
