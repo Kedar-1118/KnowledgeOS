@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed-dim": "#4edea3",
+            "primary-container": "#4f46e5",
+            "tertiary-fixed": "#ffddb8",
+            "surface": "#0b1326",
+            "secondary": "#4edea3",
+            "primary": "#c3c0ff",
+            "on-primary": "#1d00a5",
+            "surface-container": "#171f33",
+            "on-error": "#690005",
+            "surface-dim": "#0b1326",
+            "on-secondary-fixed": "#002113",
+            "surface-tint": "#c3c0ff",
+            "surface-bright": "#31394d",
+            "on-background": "#dae2fd",
+            "primary-fixed-dim": "#c3c0ff",
+            "inverse-primary": "#4d44e3",
+            "primary-fixed": "#e2dfff",
+            "outline-variant": "#464555",
+            "on-surface": "#dae2fd",
+            "on-tertiary-fixed": "#2a1700",
+            "on-tertiary-container": "#ffd4a4",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-error-container": "#ffdad6",
+            "on-surface-variant": "#c7c4d8",
+            "on-primary-fixed": "#0f0069",
+            "secondary-fixed": "#6ffbbe",
+            "surface-container-high": "#222a3d",
+            "surface-container-lowest": "#060e20",
+            "on-tertiary": "#472a00",
+            "surface-variant": "#2d3449",
+            "tertiary-fixed-dim": "#ffb95f",
+            "on-secondary-fixed-variant": "#005236",
+            "inverse-on-surface": "#283044",
+            "tertiary-container": "#885500",
+            "error-container": "#93000a",
+            "surface-container-low": "#131b2e",
+            "background": "#0b1326",
+            "error": "#ffb4ab",
+            "secondary-container": "#00a572",
+            "surface-container-highest": "#2d3449",
+            "on-primary-container": "#dad7ff",
+            "on-tertiary-fixed-variant": "#653e00",
+            "tertiary": "#ffb95f",
+            "on-secondary-container": "#00311f",
+            "on-secondary": "#003824",
+            "inverse-surface": "#dae2fd",
+            "outline": "#918fa1"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sm": "8px",
+            "xs": "4px",
+            "xl": "32px",
+            "3xl": "64px",
+            "margin-desktop": "40px",
+            "lg": "24px",
+            "base": "8px",
+            "margin-mobile": "16px",
+            "2xl": "48px",
+            "gutter": "24px",
+            "md": "16px"
+          },
+          "fontFamily": {
+            "display-xl": ["Geist"],
+            "body-md": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-lg": ["Geist"],
+            "display-lg": ["Geist"],
+            "code": ["JetBrains Mono"],
+            "label-sm": ["Geist"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-effect {
+      backdrop-filter: blur(20px);
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .search-glow:focus-within {
+      box-shadow: 0 0 15px 2px rgba(195, 192, 255, 0.15);
+    }
+    .highlight-match {
+      background-color: rgba(78, 222, 163, 0.15);
+      color: #4edea3;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    body {
+      background-color: #020617;
+      color: #dae2fd;
+    }
+  </style>
+</head>
+<body class="overflow-hidden">
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50">
+<div class="px-md mb-xl">
+<div class="font-display-lg text-display-lg font-bold text-primary tracking-tight">Nexus AI</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-xs">Enterprise Suite</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-body-md text-body-md">Library</span>
+</a>
+<a class="flex items-center gap-md bg-white/5 border-l-2 border-primary text-primary px-4 py-2" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-body-md text-body-md">Search</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-body-md text-body-md">Q&amp;A</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-body-md text-body-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-body-md text-body-md">Revision</span>
+</a>
+</nav>
+<div class="mt-auto px-md pt-lg border-t border-outline-variant/30">
+<button class="w-full py-sm px-md bg-primary-container text-on-primary-container font-medium rounded-lg mb-lg hover:opacity-90 transition-opacity">
+        New Ingestion
+      </button>
+<div class="space-y-1">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-body-md text-body-md">Status</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-sm z-40 flex justify-between items-center px-gutter">
+<div class="flex items-center gap-xl">
+<div class="flex gap-md">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">Docs</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">API</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-colors">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-colors">help_outline</button>
+<div class="h-6 w-[1px] bg-outline-variant mx-2"></div>
+<button class="bg-primary text-on-primary px-4 py-1.5 rounded-lg font-label-sm text-label-sm font-bold hover:opacity-90 transition-all">Upgrade</button>
+<img alt="User Avatar" class="h-8 w-8 rounded-full border border-outline-variant" data-alt="A professional studio headshot of a person with a clean-cut aesthetic, wearing minimalist dark clothing against a neutral gray background. The lighting is soft and directional, emphasizing high-end facial features and a modern, high-performance executive persona. The image is crisp, with high resolution and a focus on premium, professional character." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBq6UWGGG4Suam-gpEZLWp6xWISgzbH-ga1Gz0POXbslC7ySD5fiyAxvkzBmf1lbJPzwqDfYielUkQXFyBNXzPhXI1zlLvYx_SNDb60KU3UwfxaB5AGcI6xraFvrZCuYGeX7bgw8FjUr915Mc9WluetitMI5gv25OtLNl1eDbE0dmR9QV1tOh_7BiWk1FB9P7QYWcPZqQ5L7WFmll7i4EPjCEX5eGgAJA0M6rD2nevwNCDhDKex6MP28rgPyrhC__yrL1vDwsaOOeU"/>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] mt-16 h-[calc(100vh-64px)] overflow-hidden bg-surface flex flex-col items-center">
+<!-- Hero / Search Section -->
+<section class="w-full max-w-4xl pt-2xl px-gutter relative">
+<div class="text-center mb-xl">
+<h1 class="font-display-lg text-display-lg text-on-surface mb-xs">Search Intelligence</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Analyze across vectors, documents, and neural graphs.</p>
+</div>
+<div class="relative w-full group">
+<div class="search-glow flex items-center bg-surface-container-high border border-outline-variant rounded-xl p-4 transition-all duration-300">
+<span class="material-symbols-outlined text-primary mr-md">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-on-surface font-body-lg text-body-lg placeholder:text-on-surface-variant/50" id="main-search" placeholder="Search knowledge base..." type="text"/>
+<div class="flex gap-xs items-center ml-auto">
+<kbd class="font-code text-code bg-surface-container-lowest px-2 py-1 rounded border border-outline-variant text-on-surface-variant">⌘</kbd>
+<kbd class="font-code text-code bg-surface-container-lowest px-2 py-1 rounded border border-outline-variant text-on-surface-variant">K</kbd>
+</div>
+</div>
+<!-- Spotlight Dropdown (Visible on focus) -->
+<div class="absolute top-[calc(100%+8px)] left-0 w-full glass-effect rounded-xl overflow-hidden shadow-2xl opacity-0 translate-y-2 pointer-events-none transition-all duration-300 z-30" id="spotlight-dropdown">
+<div class="p-sm border-b border-outline-variant/30 flex justify-between items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant px-md">Recent History</span>
+<button class="font-label-sm text-label-sm text-primary-fixed-dim hover:text-primary px-md">Clear All</button>
+</div>
+<div class="py-2">
+<div class="flex items-center gap-md px-lg py-3 hover:bg-white/5 cursor-pointer transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">history</span>
+<span class="flex-1 font-body-md text-body-md">Neural network architecture v4.2</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">2h ago</span>
+</div>
+<div class="flex items-center gap-md px-lg py-3 hover:bg-white/5 cursor-pointer transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">history</span>
+<span class="flex-1 font-body-md text-body-md">Security protocols for data ingestion</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">Yesterday</span>
+</div>
+<div class="flex items-center gap-md px-lg py-3 hover:bg-white/5 cursor-pointer transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">history</span>
+<span class="flex-1 font-body-md text-body-md">Global latency distribution reports</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">3d ago</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Search Results / Split View -->
+<section class="flex-1 w-full max-w-6xl mt-xl mb-xl px-gutter grid grid-cols-12 gap-lg overflow-hidden">
+<!-- Results List -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-md overflow-y-auto pr-2 custom-scrollbar">
+<!-- Search Result Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-lg hover:border-primary/50 transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-sm">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">description</span>
+<h3 class="font-headline-lg text-[18px] text-on-surface font-semibold group-hover:text-primary transition-colors">Advanced <span class="highlight-match">Neural</span> Interface Protocols</h3>
+</div>
+<div class="bg-secondary-container/20 border border-secondary-fixed-dim/30 text-secondary-fixed-dim px-2 py-0.5 rounded text-[12px] font-bold">
+              98% Match
+            </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-md">
+            The documentation explores how the latest <span class="highlight-match">neural</span> interface provides ultra-low latency for enterprise-grade ingestion and real-time query resolution across diverse dataset clusters...
+          </p>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+              Updated Oct 12
+            </div>
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">folder</span>
+              Docs / Core / Architecture
+            </div>
+</div>
+</div>
+<!-- Search Result Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-lg hover:border-primary/50 transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-sm">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">hub</span>
+<h3 class="font-headline-lg text-[18px] text-on-surface font-semibold group-hover:text-primary transition-colors"><span class="highlight-match">Neural</span> Semantic Graph Mapping</h3>
+</div>
+<div class="bg-secondary-container/20 border border-secondary-fixed-dim/30 text-secondary-fixed-dim px-2 py-0.5 rounded text-[12px] font-bold">
+              86% Match
+            </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-md">
+            Connecting isolated data points using a <span class="highlight-match">neural</span> pathway strategy. This ensures that keyword relationships are maintained contextually rather than just by lexical similarity...
+          </p>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+              Updated 2 days ago
+            </div>
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">folder</span>
+              Library / R&amp;D
+            </div>
+</div>
+</div>
+<!-- Search Result Card 3 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-lg hover:border-primary/50 transition-colors group cursor-pointer opacity-80">
+<div class="flex justify-between items-start mb-sm">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">database</span>
+<h3 class="font-headline-lg text-[18px] text-on-surface font-semibold group-hover:text-primary transition-colors">Distributed Ingestion: <span class="highlight-match">Neural</span> Load Balancer</h3>
+</div>
+<div class="bg-surface-container-highest border border-outline-variant text-on-surface-variant px-2 py-0.5 rounded text-[12px] font-bold">
+              72% Match
+            </div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 mb-md">
+            Scalability benchmarks for the high-performance load balancer which utilizes <span class="highlight-match">neural</span> weights to predict traffic spikes and route API requests accordingly...
+          </p>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+              Updated Sept 30
+            </div>
+<div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">folder</span>
+              Infrastructure / Ops
+            </div>
+</div>
+</div>
+</div>
+<!-- Detail Panel (Right Side) -->
+<div class="hidden lg:flex col-span-5 flex-col bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden relative">
+<div class="absolute inset-0 z-0 opacity-20">
+
+</div>
+<div class="relative z-10 p-xl h-full flex flex-col">
+<div class="flex items-center justify-between mb-xl">
+<span class="font-label-sm text-label-sm px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full">Concept Analysis</span>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface">open_in_new</button>
+</div>
+<h2 class="font-display-lg text-[24px] text-on-surface mb-md">Advanced Neural Interface Protocols</h2>
+<div class="flex flex-wrap gap-sm mb-xl">
+<span class="px-2 py-1 bg-surface-container-high rounded border border-outline-variant text-[11px] font-code">Latency &lt; 10ms</span>
+<span class="px-2 py-1 bg-surface-container-high rounded border border-outline-variant text-[11px] font-code">AES-256</span>
+<span class="px-2 py-1 bg-surface-container-high rounded border border-outline-variant text-[11px] font-code">v4.2.0-stable</span>
+</div>
+<div class="flex-1 space-y-md">
+<div class="p-md bg-surface-container-highest/50 rounded-lg border border-outline-variant/30">
+<h4 class="font-label-sm text-label-sm text-primary mb-2 uppercase tracking-tighter">Core Definition</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">The interface serves as the primary gateway for all neural-driven tasks, managing encryption handshakes and data serialization without compromising on throughput.</p>
+</div>
+<div class="p-md bg-surface-container-highest/50 rounded-lg border border-outline-variant/30">
+<h4 class="font-label-sm text-label-sm text-primary mb-2 uppercase tracking-tighter">Matched Keywords</h4>
+<div class="flex flex-wrap gap-2">
+<span class="text-[12px] bg-secondary/10 text-secondary px-2 py-0.5 rounded">neural interface</span>
+<span class="text-[12px] bg-secondary/10 text-secondary px-2 py-0.5 rounded">protocols</span>
+<span class="text-[12px] bg-secondary/10 text-secondary px-2 py-0.5 rounded">architecture</span>
+</div>
+</div>
+<div class="p-md bg-surface-container-highest/50 rounded-lg border border-outline-variant/30">
+<h4 class="font-label-sm text-label-sm text-primary mb-2 uppercase tracking-tighter">Confidence Score</h4>
+<div class="flex items-end gap-md">
+<div class="font-display-xl text-[48px] font-bold text-on-surface">0.98</div>
+<div class="mb-2 w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[98%]" style="box-shadow: 0 0 10px rgba(195, 192, 255, 0.5);"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="mt-auto w-full py-md bg-primary text-on-primary font-bold rounded-lg flex items-center justify-center gap-md hover:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined">launch</span>
+            View Full Documentation
+          </button>
+</div>
+</div>
+</section>
+</main>
+<script>
+    const searchInput = document.getElementById('main-search');
+    const spotlight = document.getElementById('spotlight-dropdown');
+
+    searchInput.addEventListener('focus', () => {
+      spotlight.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+      spotlight.classList.add('opacity-100', 'translate-y-0');
+    });
+
+    searchInput.addEventListener('blur', (e) => {
+      // Small delay to allow click on results
+      setTimeout(() => {
+        spotlight.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+        spotlight.classList.remove('opacity-100', 'translate-y-0');
+      }, 150);
+    });
+
+    // Keyboard interaction logic
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInput.focus();
+      }
+      if (e.key === 'Escape') {
+        searchInput.blur();
+      }
+    });
+
+    // Result highlighting hover interaction simulation
+    document.querySelectorAll('.col-span-12 > div').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.transform = 'translateX(4px)';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateX(0px)';
+      });
+    });
+  </script>
+</body></html>

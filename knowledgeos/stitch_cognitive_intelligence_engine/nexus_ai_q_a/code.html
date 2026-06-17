@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --primary: #c3c0ff;
+            --surface: #0b1326;
+        }
+        body {
+            background-color: #0b1326;
+            color: #dae2fd;
+            overflow: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(23, 31, 51, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .streaming-text::after {
+            content: '';
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: var(--primary);
+            margin-left: 2px;
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#4edea3",
+                        "primary-container": "#4f46e5",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface": "#0b1326",
+                        "secondary": "#4edea3",
+                        "primary": "#c3c0ff",
+                        "on-primary": "#1d00a5",
+                        "surface-container": "#171f33",
+                        "on-error": "#690005",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "surface-tint": "#c3c0ff",
+                        "surface-bright": "#31394d",
+                        "on-background": "#dae2fd",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "inverse-primary": "#4d44e3",
+                        "primary-fixed": "#e2dfff",
+                        "outline-variant": "#464555",
+                        "on-surface": "#dae2fd",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-tertiary-container": "#ffd4a4",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#c7c4d8",
+                        "on-primary-fixed": "#0f0069",
+                        "secondary-fixed": "#6ffbbe",
+                        "surface-container-high": "#222a3d",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary": "#472a00",
+                        "surface-variant": "#2d3449",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-on-surface": "#283044",
+                        "tertiary-container": "#885500",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#131b2e",
+                        "background": "#0b1326",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#00a572",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary-container": "#dad7ff",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary": "#ffb95f",
+                        "on-secondary-container": "#00311f",
+                        "on-secondary": "#003824",
+                        "inverse-surface": "#dae2fd",
+                        "outline": "#918fa1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "3xl": "64px",
+                        "margin-desktop": "40px",
+                        "lg": "24px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "2xl": "48px",
+                        "gutter": "24px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Geist"],
+                        "display-xl": ["Geist"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "code": ["JetBrains Mono"],
+                        "label-sm": ["Geist"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-xl": ["72px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.03em", "fontWeight": "600"}],
+                        "code": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background">
+<!-- Global Side Navigation (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant bg-surface-container-lowest flex flex-col py-lg z-50">
+<div class="px-md mb-3xl">
+<h1 class="font-display-lg text-headline-lg font-bold text-primary tracking-tight">Nexus AI</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60 uppercase tracking-widest mt-1">Enterprise Suite</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-sm">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px]">folder_open</span>
+<span class="font-body-md text-body-md">Library</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px]">search</span>
+<span class="font-body-md text-body-md">Search</span>
+</a>
+<!-- Active State: Q&A -->
+<a class="flex items-center gap-md bg-white/5 border-l-2 border-primary text-primary px-4 py-2 font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<span class="font-body-md text-body-md">Q&amp;A</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+<span class="font-body-md text-body-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+<span class="font-body-md text-body-md">Revision</span>
+</a>
+</nav>
+<div class="px-md mt-lg">
+<button class="w-full py-3 bg-primary text-on-primary rounded-lg font-label-sm text-label-sm uppercase tracking-bold hover:opacity-90 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Ingestion
+            </button>
+</div>
+<div class="mt-auto flex flex-col gap-1 px-sm">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-[20px]">sensors</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-secondary rounded-full pulse-dot"></span>
+</div>
+<span class="font-body-md text-body-md">Status</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Global Top Navigation (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-xl flex-1">
+<div class="flex items-center gap-md text-on-surface-variant">
+<a class="font-label-sm text-label-sm hover:text-on-surface transition-colors" href="#">Docs</a>
+<a class="font-label-sm text-label-sm hover:text-on-surface transition-colors" href="#">API</a>
+<a class="font-label-sm text-label-sm hover:text-on-surface transition-colors" href="#">Support</a>
+</div>
+<div class="relative w-full max-w-md ml-lg group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-1.5 pl-10 pr-4 text-body-md font-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="Global semantic search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary text-primary font-label-sm text-label-sm hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+                Upgrade
+            </button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="ml-sm w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a young creative professional with a modern aesthetic, set against a blurred urban architectural background. The lighting is soft and natural, emphasizing clean lines and high-end digital textures consistent with a premium enterprise software user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnWExxqZ00IZtKl_xNgzr3iOMVXaFS1quRwCbZgBXSYRwGeAU6sUoV10QlkUbzMJwzXIHkS8nb8Ot8jb5IDtgsan9rQV1Gp3ob_6xuPNss9t-KiDSTOZuprmvELQ1G2sr9VFgmKI0fP5hQJAJQOCrme3hydVHrwRF8Iz5I6TDVbLoRMsbU-Wa4FbsmEE2FJP1H6gprhBFwsQvPqif3Tod2OtY7QGZmaQtxWNbB-Im5W5oAVLPyiH_CWL9Woev1j5qlmNacCwqVxRM"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] pt-16 h-screen flex overflow-hidden">
+<!-- Left: Chat Interface -->
+<section class="flex-1 flex flex-col min-w-0 bg-surface-dim">
+<div class="flex-1 overflow-y-auto p-gutter custom-scrollbar space-y-xl" id="chat-container">
+<!-- User Message -->
+<div class="flex flex-col items-end gap-sm max-w-3xl ml-auto">
+<div class="glass-panel px-lg py-md rounded-2xl rounded-tr-none text-on-surface shadow-sm max-w-full">
+<p class="font-body-md text-body-md leading-relaxed">How does the project's scalability compare across the three regional data centers according to the technical specs?</p>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">Sent 10:42 AM</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col items-start gap-sm max-w-3xl">
+<div class="flex items-center gap-sm mb-xs">
+<div class="w-6 h-6 bg-primary-container rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-white" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<span class="font-label-sm text-label-sm font-bold text-primary">Nexus Engine</span>
+</div>
+<div class="bg-surface-container-high/40 border border-outline-variant/30 px-lg py-md rounded-2xl rounded-tl-none text-on-surface shadow-sm">
+<div class="font-body-md text-body-md leading-relaxed space-y-md streaming-text" id="ai-response">
+<p>Based on the analyzed architecture documentation, scalability varies significantly by region:</p>
+<ul class="list-disc ml-4 space-y-sm">
+<li><strong>US-East (Primary):</strong> Supports vertical scaling up to 128 vCPUs with sub-millisecond replication latency across nodes.</li>
+<li><strong>EU-West (Secondary):</strong> Limited to 64 vCPU instances due to specific regional power constraints, but utilizes high-throughput elastic blocks.</li>
+<li><strong>AP-South:</strong> Currently in "Edge Mode" which focuses on CDN performance rather than raw compute scalability, supporting only standard cluster sizes.</li>
+</ul>
+<p>Refer to the citations on the right for specific throughput benchmarks for each region.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Chat Input Anchor -->
+<div class="p-gutter border-t border-outline-variant bg-surface-container-lowest/50">
+<div class="max-w-3xl mx-auto relative glass-panel rounded-xl p-2 transition-all focus-within:ring-2 focus-within:ring-primary/20">
+<div class="flex flex-col">
+<textarea class="w-full bg-transparent border-none text-body-md font-body-md p-md focus:ring-0 resize-none max-h-40 custom-scrollbar" id="chat-input" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" placeholder="Ask Nexus AI about your data..." rows="1"></textarea>
+<div class="flex items-center justify-between px-md pb-md">
+<div class="flex items-center gap-md">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">attach_file</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">image</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary p-2 rounded-lg hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</div>
+<div class="mt-sm text-center">
+<p class="font-label-sm text-[10px] text-on-surface-variant/40 tracking-wider">NEXUS AI MAY DISPLAY INACCURATE INFO. VERIFY CITATIONS.</p>
+</div>
+</div>
+</section>
+<!-- Right: Citations Panel -->
+<aside class="w-[380px] bg-surface-container-low border-l border-outline-variant flex flex-col overflow-hidden">
+<div class="p-md border-b border-outline-variant flex items-center justify-between">
+<h2 class="font-label-sm text-label-sm font-bold text-on-surface uppercase tracking-widest">Citations (4)</h2>
+<button class="p-1 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-md space-y-md">
+<!-- Citation Card 1 -->
+<div class="glass-panel p-md rounded-xl hover:bg-white/5 cursor-pointer transition-all border-l-4 border-l-primary group">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-sm text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded uppercase font-bold">Source 01</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-60">Page 12</span>
+</div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-xs group-hover:text-primary transition-colors">Technical_Architecture_v4.2</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant line-clamp-3 italic">"...horizontal scaling capabilities in US-East are achieved via a proprietary layer 2 orchestration shim that allows for near-linear performance gains..."</p>
+<div class="mt-md flex items-center gap-2 text-on-surface-variant text-[11px]">
+<span class="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+<span>PDF Document • 4.2 MB</span>
+</div>
+</div>
+<!-- Citation Card 2 -->
+<div class="glass-panel p-md rounded-xl hover:bg-white/5 cursor-pointer transition-all border-l-4 border-l-secondary/50 group">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-sm text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded uppercase font-bold">Source 02</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-60">Section 4.1</span>
+</div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-xs group-hover:text-primary transition-colors">Infrastructure_Audit_Report</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant line-clamp-3 italic">"Power availability in EU-West sites currently limits high-density rack configurations, necessitating the 64 vCPU cap per node..."</p>
+<div class="mt-md flex items-center gap-2 text-on-surface-variant text-[11px]">
+<span class="material-symbols-outlined text-[14px]">description</span>
+<span>Internal Doc • MD Format</span>
+</div>
+</div>
+<!-- Citation Card 3 -->
+<div class="glass-panel p-md rounded-xl hover:bg-white/5 cursor-pointer transition-all border-l-4 border-l-outline group">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-sm text-[10px] bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded uppercase font-bold">Source 03</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant opacity-60">N/A</span>
+</div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-xs group-hover:text-primary transition-colors">Live_Monitoring_API</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant line-clamp-3 italic">"Current real-time latency in AP-South is averaging 42ms for standard tier clusters, confirming the edge-optimization focus."</p>
+<div class="mt-md flex items-center gap-2 text-on-surface-variant text-[11px]">
+<span class="material-symbols-outlined text-[14px]">cloud_sync</span>
+<span>API Stream • Live</span>
+</div>
+</div>
+</div>
+<!-- Mini Map / Context Visualizer -->
+<div class="p-md bg-surface-container-highest/20 border-t border-outline-variant">
+<div class="relative h-32 rounded-lg overflow-hidden border border-outline-variant">
+<img alt="Data Center Visualization" class="w-full h-full object-cover opacity-50 grayscale" data-alt="A sophisticated digital visualization of a global data center network with glowing lines connecting hubs across a stylized dark world map. The aesthetic is high-tech and architectural, featuring deep indigo and violet tones with sharp, precise glowing nodes that represent regional data centers." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXgzzYWAPzgtVIhSKIIi62DMK_zGaNIlZ8QQfTx9F7KmGO37akFeC5t_IC-zGAMeyap8RkNH2MURq8uxr6qvBr0aqkrO7llkxLh_yv2fKyzgkLiRN1NZ5CLaExX_1pi0yQmcbK4DQjBg4g9H-HpHPsatQL1az9S9_mA6hoOq7zRFbJnDn308SiEXvDLxsNXBQjnkciUjrbZgqo0qAYd-B7UPCh_uxiWdLiNquI2kA5m2Q3Bf3K24nfHnBgdoiBPTGqI4OH5QVN_jI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low to-transparent"></div>
+<div class="absolute bottom-2 left-2">
+<p class="font-label-sm text-[10px] text-primary-fixed uppercase tracking-widest font-bold">Network Topology</p>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Simulate text streaming on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const aiResponse = document.getElementById('ai-response');
+            const originalContent = aiResponse.innerHTML;
+            aiResponse.innerHTML = '';
+            
+            // Very simple streaming simulation by replacing content after a delay
+            // In a real app this would be word by word
+            setTimeout(() => {
+                aiResponse.innerHTML = originalContent;
+                aiResponse.classList.remove('streaming-text');
+            }, 2500);
+        });
+
+        // Handle auto-resize of textarea is already inlined in HTML
+    </script>
+</body></html>

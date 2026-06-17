@@ -1,147 +1,202 @@
 // apps/frontend/src/components/Sidebar.tsx
 /**
- * Navigation sidebar with links to all main sections.
- * Active state highlighting, icons from Lucide React.
+ * Sidebar — Clean navigation sidebar with active link indicators,
+ * live ingestion pipeline statuses, and user session management.
  */
 
-import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Search,
-  MessageSquare,
-  Library,
-  Share2,
-  Sparkles,
-  GraduationCap,
-  Settings,
-  LogOut,
-  Brain,
-  CheckCircle2,
-} from 'lucide-react';
-
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LogOut } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { api } from '../lib/api';
+
+interface SyncStatus {
+  isRunning: boolean;
+  documents: {
+    total: number;
+    indexed: number;
+    processing: number;
+  };
+}
 
 interface NavItem {
   to: string;
   label: string;
-  icon: React.ReactNode;
+  icon: string;
 }
 
-const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { to: '/search', label: 'Search', icon: <Search size={18} /> },
-  { to: '/ask', label: 'Ask My Knowledge', icon: <MessageSquare size={18} /> },
-  { to: '/library', label: 'Library', icon: <Library size={18} /> },
-  { to: '/graph', label: 'Knowledge Graph', icon: <Share2 size={18} /> },
-  { to: '/recommendations', label: 'Recommendations', icon: <Sparkles size={18} /> },
-  { to: '/revision', label: 'Revision Deck', icon: <GraduationCap size={18} /> },
+const mainNavItems: NavItem[] = [
+  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/library', label: 'Library', icon: 'folder_open' },
+  { to: '/search', label: 'Search', icon: 'search' },
+  { to: '/ask', label: 'Q&A', icon: 'smart_toy' },
+  { to: '/graph', label: 'Knowledge Graph', icon: 'hub' },
+  { to: '/recommendations', label: 'Recommendations', icon: 'sparkles' },
+  { to: '/revision', label: 'Revision', icon: 'psychology' },
 ];
 
 export function Sidebar() {
   const { user, logout } = useAuthStore();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // Retrieve live connector stats
+  const { data: syncStatus } = useQuery<SyncStatus>({
+    queryKey: ['drive-status'],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: SyncStatus }>('/api/drive/status');
+      return res.data.data;
+    },
+    refetchInterval: 15000,
+  });
+
+  // Trigger sync manually via New Ingestion button
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/api/drive/sync-now');
+      return res.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['drive-status'] });
+    },
+  });
+
+  const isSyncing = syncStatus?.isRunning || syncMutation.isPending;
+  const processingCount = syncStatus?.documents.processing ?? 0;
 
   return (
-    <aside className="w-[240px] h-screen sticky top-0 flex flex-col border-r border-surface-border bg-background-elevated select-none z-30 flex-shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-6 py-6 border-b border-surface-border">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-purple/10 border border-accent-purple/20 text-accent-purple shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-          <Brain size={18} className="animate-pulse" />
-        </div>
-        <span className="text-sm font-bold tracking-tight text-text-primary font-sans">
-          KnowledgeOS
-        </span>
+    <aside className="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50 select-none">
+      {/* Brand Title */}
+      <div className="px-lg mb-2xl">
+        <h1 
+          className="font-display-lg text-headline-lg font-bold text-primary tracking-tight cursor-pointer"
+          onClick={() => navigate('/dashboard')}
+        >
+          Nexus AI
+        </h1>
+        <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-xs">
+          Enterprise Suite
+        </p>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-1">
-        {navItems.map((item) => (
+      {/* Main Nav Links */}
+      <nav className="flex-1 px-md space-y-xs overflow-y-auto">
+        {mainNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 group relative ${
+              `flex items-center gap-md px-4 py-2 transition-transform active:scale-[0.98] ${
                 isActive
-                  ? 'bg-surface text-text-primary border border-surface-border shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover/50 border border-transparent'
+                  ? 'bg-white/5 border-l-2 border-primary text-primary font-medium'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors'
               }`
             }
           >
-            {({ isActive }) => (
-              <>
-                <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-accent-teal' : 'text-text-muted group-hover:text-text-secondary'}`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-                {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-accent-teal" />
-                )}
-              </>
-            )}
+            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+            <span className="text-xs font-semibold">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      {/* Connection status widget */}
-      <div className="mx-4 my-2 p-3.5 rounded-xl border border-surface-border bg-surface/30">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
-          </span>
-          <span className="text-[9px] font-bold tracking-wider text-text-secondary uppercase">
-            Drive Connector
-          </span>
+      {/* Dynamic Sync Status Widget */}
+      <div className="mx-4 my-2 p-3 rounded-lg border border-outline-variant bg-surface/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isSyncing ? 'animate-ping bg-secondary' : processingCount > 0 ? 'animate-ping bg-tertiary' : 'bg-secondary'
+              }`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                isSyncing ? 'bg-secondary' : processingCount > 0 ? 'bg-tertiary' : 'bg-secondary'
+              }`} />
+            </span>
+            <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+              Drive Sync
+            </span>
+          </div>
+          {isSyncing && (
+            <span className="material-symbols-outlined text-xs text-primary animate-spin">
+              sync
+            </span>
+          )}
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-[10px] text-text-muted">Status:</span>
-          <span className="text-[10px] font-semibold text-success flex items-center gap-1">
-            <CheckCircle2 size={10} /> Active
+        <div className="mt-2 flex items-center justify-between text-[11px] text-on-surface-variant">
+          <span>
+            {isSyncing ? 'Fetching...' : processingCount > 0 ? `Parsing ${processingCount}` : 'Idle & Synced'}
+          </span>
+          <span className="font-mono text-[10px] font-semibold text-primary">
+            {syncStatus?.documents.indexed ?? 0} Ingested
           </span>
         </div>
       </div>
 
-      {/* User section */}
-      <div className="border-t border-surface-border px-4 py-4 bg-background-elevated">
+      {/* Bottom Controls / Config */}
+      <div className="mt-auto px-md pt-lg border-t border-outline-variant/30 flex flex-col gap-xs">
+        <button
+          onClick={() => syncMutation.mutate()}
+          disabled={isSyncing}
+          className="bg-primary text-on-primary-fixed font-bold py-sm rounded px-md mb-md hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs"
+        >
+          <span className="material-symbols-outlined text-[20px]">add</span>
+          <span>{isSyncing ? 'Syncing...' : 'New Ingestion'}</span>
+        </button>
+
         <NavLink
-          to="/settings"
+          to="/status"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 group ${
+            `flex items-center gap-md px-4 py-2 transition-transform active:scale-[0.98] ${
               isActive
-                ? 'bg-surface text-text-primary border border-surface-border'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover/50'
+                ? 'bg-white/5 border-l-2 border-primary text-primary font-medium'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors'
             }`
           }
         >
-          <Settings size={16} className="text-text-muted group-hover:text-text-secondary group-hover:rotate-45 transition-transform duration-300" />
-          <span>Settings</span>
+          <div className="relative flex items-center justify-center">
+            <span className="material-symbols-outlined text-[20px]">sensors</span>
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-secondary rounded-full pulse-dot"></span>
+          </div>
+          <span className="text-xs font-semibold">Status</span>
         </NavLink>
 
-        <div className="flex items-center justify-between mt-3 px-3 py-2 bg-surface/50 border border-surface-border rounded-xl">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name}
-                className="w-6.5 h-6.5 rounded-full border border-surface-border flex-shrink-0"
-              />
-            ) : (
-              <div className="w-6.5 h-6.5 rounded-full bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center flex-shrink-0 text-xs font-bold font-mono">
-                {user?.name?.charAt(0) ?? '?'}
-              </div>
-            )}
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-md px-4 py-2 transition-transform active:scale-[0.98] ${
+              isActive
+                ? 'bg-white/5 border-l-2 border-primary text-primary font-medium'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors'
+            }`
+          }
+        >
+          <span className="material-symbols-outlined text-[20px]">settings</span>
+          <span className="text-xs font-semibold">Settings</span>
+        </NavLink>
+
+        {/* User Session Profile & Logout */}
+        <div className="flex items-center justify-between px-3 py-2 bg-white/5 border border-outline-variant rounded-xl mt-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-outline-variant flex-shrink-0">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-xs font-mono font-bold text-primary">
+                  {user?.name?.charAt(0) ?? '?'}
+                </div>
+              )}
+            </div>
             <div className="flex flex-col min-w-0 leading-tight">
-              <span className="text-[11px] font-bold text-text-primary truncate">
-                {user?.name ?? 'User'}
+              <span className="text-[10px] font-bold text-on-surface truncate">
+                {user?.name ?? 'Alex'}
               </span>
-              <span className="text-[9px] text-text-muted truncate">
-                {user?.email ?? 'signed in'}
+              <span className="text-[9px] text-on-surface-variant truncate">
+                {user?.email ?? 'alex@enterprise.ai'}
               </span>
             </div>
           </div>
-
           <button
             onClick={logout}
-            className="p-1.5 rounded-lg hover:text-error hover:bg-error/10 text-text-muted transition-colors duration-200 flex-shrink-0"
+            className="p-1 rounded-lg hover:text-error hover:bg-error/10 text-on-surface-variant transition-colors cursor-pointer flex-shrink-0"
             title="Logout"
           >
             <LogOut size={13} />

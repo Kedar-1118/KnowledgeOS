@@ -1,27 +1,13 @@
 // apps/frontend/src/pages/GraphPage.tsx
 /**
- * Redesigned Knowledge Graph Page.
- * Interactive force-directed canvas.
- * Adds custom force physics sliders (repulsion, edge distance, center gravity),
- * node type category visibility filters, and a right-side Node Details Inspector panel.
+ * GraphPage — Interactive Force-Directed Canvas.
+ * Maps document nodes and entity relationships dynamically.
+ * Features customizable physical forces, filters, and a details sidebar.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  RefreshCw,
-  Info,
-  Sliders,
-  Eye,
-  Share2,
-} from 'lucide-react';
-
 import { api } from '../lib/api';
-
-// ─── Types ───
 
 interface GraphNode {
   id: string;
@@ -29,7 +15,7 @@ interface GraphNode {
   type: string;
   description: string | null;
   size: number;
-  // Physics simulation fields
+  // Physics properties
   x: number;
   y: number;
   vx: number;
@@ -53,7 +39,7 @@ interface GraphStats {
   nodesByType: Array<{ type: string; count: number }>;
 }
 
-const NODE_COLORS: Record<string, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   CONCEPT: '#818cf8',
   PERSON: '#10b981',
   TECHNOLOGY: '#0ea5e9',
@@ -62,28 +48,25 @@ const NODE_COLORS: Record<string, string> = {
   OTHER: '#71717a',
 };
 
-const EDGE_COLOR = 'rgba(255,255,255,0.03)';
-const EDGE_HOVER_COLOR = 'rgba(99,102,241,0.25)';
-
 export function GraphPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>(0);
-  
+  const simLoopRef = useRef<number>(0);
+
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // Physics states
-  const [repulsionStrength, setRepulsionStrength] = useState(600);
-  const [edgeDistance, setEdgeDistance] = useState(130);
-  const [centerGravity, setCenterGravity] = useState(0.002);
+  // Physics customization
+  const [repulsion, setRepulsion] = useState(550);
+  const [linkDistance, setLinkDistance] = useState(120);
+  const [gravity, setGravity] = useState(0.002);
 
-  // Type visibility filters
+  // Filters state
   const [filters, setFilters] = useState<Record<string, boolean>>({
     CONCEPT: true,
     PERSON: true,
@@ -93,10 +76,10 @@ export function GraphPage() {
     OTHER: true,
   });
 
-  const nodesRef = useRef<GraphNode[]>([]);
-  const edgesRef = useRef<GraphEdge[]>([]);
+  const activeNodesRef = useRef<GraphNode[]>([]);
+  const activeEdgesRef = useRef<GraphEdge[]>([]);
 
-  // Fetch graph API data
+  // ─── Queries: Fetch Data ───
   const { data: nodesData } = useQuery<{ nodes: GraphNode[]; totalNodes: number }>({
     queryKey: ['graph-nodes'],
     queryFn: async () => {
@@ -121,527 +104,424 @@ export function GraphPage() {
     },
   });
 
-  // Filter nodes & edges dynamically based on user selections
-  const getFilteredData = useCallback(() => {
+  // Filter computations
+  const getFilteredGraph = useCallback(() => {
     if (!nodesData?.nodes) return { nodes: [], edges: [] };
-    const filteredNodes = nodesData.nodes.filter(n => filters[n.type] ?? true);
-    const activeNodeIds = new Set(filteredNodes.map(n => n.id));
-    const filteredEdges = (edgesData?.edges ?? []).filter(
-      e => activeNodeIds.has(e.source) && activeNodeIds.has(e.target)
+    const nodes = nodesData.nodes.filter((n) => filters[n.type] ?? true);
+    const activeIds = new Set(nodes.map((n) => n.id));
+    const edges = (edgesData?.edges ?? []).filter(
+      (e) => activeIds.has(e.source) && activeIds.has(e.target)
     );
-    return { nodes: filteredNodes, edges: filteredEdges };
+    return { nodes, edges };
   }, [nodesData, edgesData, filters]);
 
-  // Sync animation references when data or filters change
+  // Sync canvas size
   useEffect(() => {
-    const { nodes, edges } = getFilteredData();
-    if (nodes.length === 0) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-
-    // Preserve existing coords or initialize randomly
-    const existingNodeMap = new Map(nodesRef.current.map(n => [n.id, n]));
-
-    nodesRef.current = nodes.map(n => {
-      const exist = existingNodeMap.get(n.id);
-      return {
-        ...n,
-        x: exist ? exist.x : width / 2 + (Math.random() - 0.5) * 350,
-        y: exist ? exist.y : height / 2 + (Math.random() - 0.5) * 350,
-        vx: exist ? exist.vx : 0,
-        vy: exist ? exist.vy : 0,
-        fx: null,
-        fy: null,
-      };
-    });
-    edgesRef.current = edges;
-
-    const tick = () => {
-      simulate();
-      render();
-      animationRef.current = requestAnimationFrame(tick);
-    };
-    animationRef.current = requestAnimationFrame(tick);
-
-    return () => cancelAnimationFrame(animationRef.current);
-  }, [nodesData, edgesData, filters, getFilteredData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Resize canvas handler
-  useEffect(() => {
-    const resize = () => {
+    const handleResize = () => {
       const canvas = canvasRef.current;
       const container = containerRef.current;
       if (!canvas || !container) return;
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
     };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Force simulation tick loop
-  const simulate = useCallback(() => {
-    const nodes = nodesRef.current;
+  // Update simulation loop coordinates
+  useEffect(() => {
+    const { nodes, edges } = getFilteredGraph();
     if (nodes.length === 0) return;
 
-    const edges = edgesRef.current;
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    // Repulsion charge forces
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i]!;
-        const b = nodes[j]!;
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-        const force = repulsionStrength / (dist * dist);
-        const fx = (dx / dist) * force;
-        const fy = (dy / dist) * force;
-        a.vx -= fx;
-        a.vy -= fy;
-        b.vx += fx;
-        b.vy += fy;
-      }
-    }
-
-    // Attraction link forces
-    for (const edge of edges) {
-      const source = nodeMap.get(edge.source);
-      const target = nodeMap.get(edge.target);
-      if (!source || !target) continue;
-
-      const dx = target.x - source.x;
-      const dy = target.y - source.y;
-      const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      const force = (dist - edgeDistance) * 0.012 * edge.strength;
-      const fx = (dx / dist) * force;
-      const fy = (dy / dist) * force;
-      source.vx += fx;
-      source.vy += fy;
-      target.vx -= fx;
-      target.vy -= fy;
-    }
-
-    // Center Gravity pulling
-    const canvas = canvasRef.current;
-    const cx = canvas ? canvas.width / 2 : 400;
-    const cy = canvas ? canvas.height / 2 : 300;
-
-    for (const node of nodes) {
-      node.vx += (cx - node.x) * centerGravity;
-      node.vy += (cy - node.y) * centerGravity;
-
-      // Apply friction damping
-      node.vx *= 0.88;
-      node.vy *= 0.88;
-
-      if (node.fx !== null) {
-        node.x = node.fx;
-        node.vx = 0;
-      } else {
-        node.x += node.vx;
-      }
-
-      if (node.fy !== null) {
-        node.y = node.fy;
-        node.vy = 0;
-      } else {
-        node.y += node.vy;
-      }
-    }
-  }, [repulsionStrength, edgeDistance, centerGravity]);
-
-  // Canvas drawing tick
-  const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const cw = canvas.width;
+    const ch = canvas.height;
 
-    const nodes = nodesRef.current;
-    const edges = edgesRef.current;
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    // Initialize node physics placement if not set
+    nodes.forEach((n, idx) => {
+      if (n.x === undefined || isNaN(n.x)) {
+        const angle = (idx / nodes.length) * 2 * Math.PI;
+        const r = Math.min(cw, ch) * 0.25 * Math.random();
+        n.x = cw / 2 + r * Math.cos(angle);
+        n.y = ch / 2 + r * Math.sin(angle);
+        n.vx = 0;
+        n.vy = 0;
+      }
+    });
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.translate(offset.x, offset.y);
-    ctx.scale(zoom, zoom);
+    activeNodesRef.current = nodes;
+    activeEdgesRef.current = edges;
 
-    // Draw link edges
-    for (const edge of edges) {
-      const source = nodeMap.get(edge.source);
-      const target = nodeMap.get(edge.target);
-      if (!source || !target) continue;
+    // Physics ticks
+    const tick = () => {
+      const activeNodes = activeNodesRef.current;
+      const activeEdges = activeEdgesRef.current;
 
-      const isHovered = hoveredNode && (hoveredNode.id === edge.source || hoveredNode.id === edge.target);
-      const isSelected = selectedNode && (selectedNode.id === edge.source || selectedNode.id === edge.target);
+      // 1. Repulsion force
+      for (let i = 0; i < activeNodes.length; i++) {
+        const n1 = activeNodes[i];
+        if (!n1) continue;
+        for (let j = i + 1; j < activeNodes.length; j++) {
+          const n2 = activeNodes[j];
+          if (!n2) continue;
 
-      ctx.beginPath();
-      ctx.moveTo(source.x, source.y);
-      ctx.lineTo(target.x, target.y);
-      ctx.strokeStyle = isSelected ? 'var(--color-accent-teal)' : isHovered ? EDGE_HOVER_COLOR : EDGE_COLOR;
-      ctx.lineWidth = isSelected ? 2 : isHovered ? 1.5 : 1;
-      ctx.stroke();
-    }
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const distSq = dx * dx + dy * dy + 0.1;
+          const dist = Math.sqrt(distSq);
 
-    // Draw nodes
-    for (const node of nodes) {
-      const isHovered = hoveredNode?.id === node.id;
-      const isSelected = selectedNode?.id === node.id;
-      const radius = isSelected ? 12 : isHovered ? 9 : 6.5;
-      const color = NODE_COLORS[node.type] ?? NODE_COLORS['OTHER']!;
+          if (dist < 300) {
+            const force = repulsion / distSq;
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
 
-      // Glow indicators
-      if (isSelected || isHovered) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 5, 0, Math.PI * 2);
-        ctx.fillStyle = isSelected ? 'rgba(14,165,233,0.18)' : `${color}25`;
-        ctx.fill();
+            n1.vx -= fx;
+            n1.vy -= fy;
+            n2.vx += fx;
+            n2.vy += fy;
+          }
+        }
       }
 
-      // Base circle
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.strokeStyle = isSelected ? '#fafafa' : 'rgba(0,0,0,0.5)';
-      ctx.lineWidth = isSelected ? 2 : 1;
-      ctx.fill();
-      ctx.stroke();
+      // 2. Link attractive force
+      activeEdges.forEach((edge) => {
+        const sNode = activeNodes.find((n) => n.id === edge.source);
+        const tNode = activeNodes.find((n) => n.id === edge.target);
 
-      // Label background & text
-      ctx.font = `${isSelected ? 'bold 11px' : '9px'} 'Plus Jakarta Sans', sans-serif`;
-      const labelText = node.label;
-      const textWidth = ctx.measureText(labelText).width;
+        if (sNode && tNode) {
+          const dx = tNode.x - sNode.x;
+          const dy = tNode.y - sNode.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+          const delta = dist - linkDistance;
+          const force = delta * 0.04 * edge.strength;
 
-      ctx.fillStyle = 'rgba(7,7,9,0.75)';
-      ctx.fillRect(node.x - textWidth / 2 - 4, node.y + radius + 4, textWidth + 8, 14);
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
 
-      ctx.fillStyle = isSelected ? '#fafafa' : isHovered ? '#d1d5db' : '#a1a1aa';
-      ctx.textAlign = 'center';
-      ctx.fillText(labelText, node.x, node.y + radius + 14);
-    }
+          sNode.vx += fx;
+          sNode.vy += fy;
+          tNode.vx -= fx;
+          tNode.vy -= fy;
+        }
+      });
 
-    ctx.restore();
-  }, [hoveredNode, selectedNode, zoom, offset]);
+      // 3. Gravity center pull & dampening
+      activeNodes.forEach((n) => {
+        const dx = cw / 2 - n.x;
+        const dy = ch / 2 - n.y;
 
-  // Click & hover position matching helper
-  const getNodeAtPosition = useCallback((mx: number, my: number) => {
-    const nodes = nodesRef.current;
-    const x = (mx - offset.x) / zoom;
-    const y = (my - offset.y) / zoom;
+        n.vx += dx * gravity;
+        n.vy += dy * gravity;
 
-    for (const node of nodes) {
-      const dx = node.x - x;
-      const dy = node.y - y;
-      if (dx * dx + dy * dy < 20 * 20) return node;
-    }
-    return null;
-  }, [zoom, offset]);
+        // Apply friction drag
+        n.vx *= 0.82;
+        n.vy *= 0.82;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (n.fx !== null && n.fx !== undefined) {
+          n.x = n.fx;
+          n.vx = 0;
+        } else {
+          n.x += n.vx;
+        }
+
+        if (n.fy !== null && n.fy !== undefined) {
+          n.y = n.fy;
+          n.vy = 0;
+        } else {
+          n.y += n.vy;
+        }
+      });
+
+      // 4. Render frame
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.save();
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(zoom, zoom);
+
+        // Draw Links
+        ctx.lineWidth = 1;
+        activeEdges.forEach((edge) => {
+          const sNode = activeNodes.find((n) => n.id === edge.source);
+          const tNode = activeNodes.find((n) => n.id === edge.target);
+
+          if (sNode && tNode) {
+            ctx.beginPath();
+            ctx.moveTo(sNode.x, sNode.y);
+            ctx.lineTo(tNode.x, tNode.y);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.stroke();
+          }
+        });
+
+        // Draw Nodes
+        activeNodes.forEach((n) => {
+          const color = CATEGORY_COLORS[n.type] || '#71717a';
+
+          // Outer halo
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, (n.size ?? 10) * 1.5, 0, 2 * Math.PI);
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.fill();
+          ctx.stroke();
+
+          // Inner dot
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, (n.size ?? 10) * 0.5, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+
+          // Label
+          ctx.font = "bold 9px 'Geist', sans-serif";
+          ctx.fillStyle = '#dae2fd';
+          ctx.textAlign = 'center';
+          ctx.fillText(n.label, n.x, n.y + (n.size ?? 10) * 2.5);
+        });
+
+        ctx.restore();
+      }
+
+      simLoopRef.current = requestAnimationFrame(tick);
+    };
+
+    simLoopRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(simLoopRef.current);
+  }, [getFilteredGraph, repulsion, linkDistance, gravity, offset, zoom]);
+
+  // Click & Panning handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setDragging(true);
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    setMousePos({ x: e.clientX, y: e.clientY });
+    const mx = (e.clientX - rect.left - offset.x) / zoom;
+    const my = (e.clientY - rect.top - offset.y) / zoom;
 
-    if (isDragging) {
-      setOffset(prev => ({
-        x: prev.x + (e.clientX - dragStart.x),
-        y: prev.y + (e.clientY - dragStart.y),
-      }));
-      setDragStart({ x: e.clientX, y: e.clientY });
-    } else {
-      const node = getNodeAtPosition(mx, my);
-      setHoveredNode(node);
-      canvas.style.cursor = node ? 'pointer' : 'grab';
+    setCursorPos({ x: e.clientX, y: e.clientY });
+
+    // Handle dragging/panning viewport
+    if (dragging) {
+      setOffset({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+      return;
     }
-  }, [isDragging, dragStart, getNodeAtPosition]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, []);
+    // Hover detection
+    const hovered = activeNodesRef.current.find((n) => {
+      const dx = n.x - mx;
+      const dy = n.y - my;
+      return Math.sqrt(dx * dx + dy * dy) < (n.size ?? 10) * 1.8;
+    });
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    setIsDragging(false);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    setHoveredNode(hovered ?? null);
+  };
 
-    // If mouse didn't drag much, trigger click selection
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    
-    const node = getNodeAtPosition(mx, my);
-    if (node) {
-      setSelectedNode(node);
+  const handleMouseUp = () => {
+    setDragging(false);
+  };
+
+  const handleCanvasClick = () => {
+    if (hoveredNode) {
+      setSelectedNode(hoveredNode);
     } else {
       setSelectedNode(null);
     }
-  }, [getNodeAtPosition]);
+  };
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.max(0.3, Math.min(3, z * delta)));
-  }, []);
-
-  // Filter count metrics
-  const totalNodes = nodesData?.totalNodes ?? 0;
-  const filteredNodesCount = nodesRef.current.length;
+  const handleRecenter = () => {
+    setOffset({ x: 0, y: 0 });
+    setZoom(1);
+  };
 
   return (
-    <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)] select-none">
+    <div className="h-[calc(100vh-100px)] relative overflow-hidden rounded-xl border border-outline-variant glass-panel select-none" ref={containerRef}>
       
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-extrabold text-text-primary uppercase tracking-wider">
-            Knowledge Map
-          </h1>
-          <p className="text-xs text-text-secondary mt-1">
-            Rendering {filteredNodesCount} of {totalNodes} entities. Drag to pan, scroll to zoom.
-          </p>
+      {/* Simulation canvas viewport */}
+      <canvas
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onClick={handleCanvasClick}
+        className="w-full h-full cursor-grab active:cursor-grabbing graph-canvas block"
+      />
+
+      {/* Detail Overlay Tooltip */}
+      {(hoveredNode || selectedNode) && (
+        <div
+          className="absolute glass-panel p-md rounded-xl w-64 shadow-2xl z-40 animate-fade-in"
+          style={{
+            top: `${Math.min(cursorPos.y - 120, window.innerHeight - 340)}px`,
+            left: `${Math.min(cursorPos.x - 220, window.innerWidth - 300)}px`,
+          }}
+        >
+          {(() => {
+            const activeNode = selectedNode || hoveredNode;
+            if (!activeNode) return null;
+            const nodeColor = CATEGORY_COLORS[activeNode.type] || '#71717a';
+
+            return (
+              <>
+                <div className="flex justify-between items-start mb-sm">
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest"
+                    style={{ backgroundColor: `${nodeColor}15`, color: nodeColor }}
+                  >
+                    {activeNode.type}
+                  </span>
+                  <span className="text-on-surface-variant text-[10px]">Active Node</span>
+                </div>
+                <h3 className="font-headline-lg text-sm text-on-surface mb-xs font-bold">
+                  {activeNode.label}
+                </h3>
+                <p className="text-on-surface-variant text-[11px] leading-relaxed mb-md">
+                  {activeNode.description || 'No entity summary indexed yet.'}
+                </p>
+                <div className="grid grid-cols-2 gap-sm">
+                  <div className="bg-white/5 p-2 rounded-lg border border-outline-variant/30 text-xs">
+                    <p className="text-[8px] text-outline uppercase font-bold">Vector Size</p>
+                    <p className="text-on-surface font-code font-bold mt-0.5">{activeNode.size ?? 10}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-lg border border-outline-variant/30 text-xs">
+                    <p className="text-[8px] text-outline uppercase font-bold">Influence</p>
+                    <p className="text-secondary font-code font-bold mt-0.5">High</p>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Floating Control Panel */}
+      <div className="absolute bottom-lg left-1/2 -translate-x-1/2 flex items-center gap-sm p-2 glass-panel rounded-full shadow-lg z-50 flex-wrap">
+        <div className="flex items-center gap-1 border-r border-outline-variant pr-sm ml-sm flex-wrap">
+          {Object.keys(filters).map((type) => {
+            const checked = filters[type];
+            const color = CATEGORY_COLORS[type] || '#71717a';
+
+            return (
+              <button
+                key={type}
+                onClick={() => setFilters((f) => ({ ...f, [type]: !f[type] }))}
+                className={`p-2 rounded-full transition-all cursor-pointer text-xs font-bold`}
+                style={{
+                  backgroundColor: checked ? `${color}20` : 'transparent',
+                  color: checked ? color : 'var(--color-on-surface-variant)',
+                }}
+                title={type}
+              >
+                <span className="material-symbols-outlined text-[20px] block">
+                  {type === 'CONCEPT' ? 'lightbulb' :
+                   type === 'PERSON' ? 'group' :
+                   type === 'TECHNOLOGY' ? 'precision_manufacturing' :
+                   type === 'PLACE' ? 'location_on' : 'hub'}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Zoom controller actions */}
-        <div className="flex items-center gap-1">
+        {/* Zoom adjustment */}
+        <div className="flex items-center gap-1 px-sm">
           <button
-            onClick={() => setZoom(z => Math.min(3, z * 1.2))}
-            className="p-1.5 rounded-lg border border-surface-border text-text-secondary hover:text-text-primary bg-surface cursor-pointer"
-            title="Zoom In"
+            onClick={() => setZoom((z) => Math.min(3, z + 0.15))}
+            className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full cursor-pointer"
           >
-            <ZoomIn size={14} />
+            <span className="material-symbols-outlined text-[20px] block">add</span>
           </button>
+          <span className="font-code text-[11px] text-on-surface-variant min-w-[32px] text-center font-mono">
+            {Math.round(zoom * 100)}%
+          </span>
           <button
-            onClick={() => setZoom(z => Math.max(0.3, z * 0.8))}
-            className="p-1.5 rounded-lg border border-surface-border text-text-secondary hover:text-text-primary bg-surface cursor-pointer"
-            title="Zoom Out"
+            onClick={() => setZoom((z) => Math.max(0.3, z - 0.15))}
+            className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full cursor-pointer"
           >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}
-            className="p-1.5 rounded-lg border border-surface-border text-text-secondary hover:text-text-primary bg-surface cursor-pointer"
-            title="Reset Map Layout"
-          >
-            <Maximize2 size={14} />
+            <span className="material-symbols-outlined text-[20px] block">remove</span>
           </button>
         </div>
+
+        {/* Physics Force Settings dropdown/trigger */}
+        <div className="flex items-center gap-1 border-l border-outline-variant pl-sm pr-sm">
+          <span className="text-[9px] font-bold text-on-surface-variant uppercase mr-1">Repulsion</span>
+          <input
+            type="range"
+            min="200"
+            max="1200"
+            step="50"
+            value={repulsion}
+            onChange={(e) => setRepulsion(Number(e.target.value))}
+            className="w-16 h-1 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+        </div>
+
+        <button
+          onClick={handleRecenter}
+          className="flex items-center gap-sm px-4 py-2 bg-surface-bright text-on-surface rounded-full font-label-sm border border-outline-variant hover:bg-white/10 transition-colors mr-1 cursor-pointer text-[11px] font-bold"
+        >
+          <span className="material-symbols-outlined text-[18px] block">recenter</span>
+          <span>Recenter</span>
+        </button>
       </div>
 
-      {/* Main split workarea */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* Left Area: Canvas Graph Simulator */}
-        <div
-          ref={containerRef}
-          className="lg:col-span-8 rounded-2xl border border-surface-border bg-surface-elevated relative overflow-hidden flex flex-col justify-end"
-        >
-          <canvas
-            ref={canvasRef}
-            onMouseMove={handleMouseMove}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={() => setIsDragging(false)}
-            onWheel={handleWheel}
-            className="absolute inset-0 block w-full h-full cursor-grab"
-          />
-
-          {/* Floating UI: Node Category filters */}
-          <div className="absolute top-4 left-4 p-4 rounded-xl border border-surface-border bg-surface/90 backdrop-blur-xl shadow-lg space-y-3 max-w-[180px]">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block border-b border-surface-border pb-1.5">
-              Category Layers
-            </span>
-            <div className="space-y-1.5">
-              {Object.entries(NODE_COLORS).map(([type, color]) => (
-                <label key={type} className="flex items-center gap-2 text-[10px] text-text-secondary cursor-pointer hover:text-text-primary transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={filters[type] ?? true}
-                    onChange={(e) => {
-                      setFilters(prev => ({ ...prev, [type]: e.target.checked }));
-                      setSelectedNode(null); // Reset selection
-                    }}
-                    className="rounded text-accent-teal bg-background-elevated border-surface-border focus:ring-transparent focus:ring-offset-0 cursor-pointer"
-                  />
-                  <span className="w-1.75 h-1.75 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                  <span>{type.charAt(0) + type.slice(1).toLowerCase()}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Floating UI: Physics Param adjust sliders */}
-          <div className="absolute bottom-4 left-4 p-4 rounded-xl border border-surface-border bg-surface/90 backdrop-blur-xl shadow-lg space-y-3 max-w-[180px]">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block border-b border-surface-border pb-1.5 flex items-center gap-1">
-              <Sliders size={11} /> Force Physics
-            </span>
-            
-            <div className="space-y-2 text-[9px] text-text-secondary">
-              <div>
-                <div className="flex justify-between font-medium">
-                  <span>Node Repulsion:</span>
-                  <span className="font-mono">{repulsionStrength}</span>
-                </div>
-                <input
-                  type="range"
-                  min="200"
-                  max="1200"
-                  step="50"
-                  value={repulsionStrength}
-                  onChange={(e) => setRepulsionStrength(Number(e.target.value))}
-                  className="w-full h-1 bg-surface-border rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between font-medium">
-                  <span>Link Distance:</span>
-                  <span className="font-mono">{edgeDistance}</span>
-                </div>
-                <input
-                  type="range"
-                  min="60"
-                  max="250"
-                  step="10"
-                  value={edgeDistance}
-                  onChange={(e) => setEdgeDistance(Number(e.target.value))}
-                  className="w-full h-1 bg-surface-border rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between font-medium">
-                  <span>Gravity Pull:</span>
-                  <span className="font-mono">{centerGravity.toFixed(3)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.0005"
-                  max="0.006"
-                  step="0.0005"
-                  value={centerGravity}
-                  onChange={(e) => setCenterGravity(Number(e.target.value))}
-                  className="w-full h-1 bg-surface-border rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Tooltip on mouse hover */}
-          {hoveredNode && !isDragging && (
-            <div
-              className="fixed z-50 rounded-lg px-3 py-2 border pointer-events-none text-xs bg-surface/95 border-surface-border backdrop-blur-md shadow-2xl"
-              style={{
-                left: mousePos.x + 15,
-                top: mousePos.y - 12,
-              }}
-            >
-              <div className="flex items-center gap-1.5 mb-1 font-bold text-text-primary">
-                <span
-                  className="w-1.75 h-1.75 rounded-full"
-                  style={{ backgroundColor: NODE_COLORS[hoveredNode.type] ?? NODE_COLORS['OTHER'] }}
-                />
-                <span>{hoveredNode.label}</span>
-              </div>
-              <span className="text-[9px] font-bold tracking-wider text-text-muted uppercase">
-                {hoveredNode.type}
+      {/* Sidebar Stats Panel (Visible on large screens) */}
+      <div className="absolute top-lg right-lg w-72 glass-panel rounded-2xl p-lg z-40 hidden xl:block text-xs">
+        <div className="flex items-center justify-between mb-lg border-b border-outline-variant/30 pb-3">
+          <h4 className="font-headline-lg text-sm font-semibold">Network Stats</h4>
+          <span className="material-symbols-outlined text-outline">info</span>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-[10px] mb-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              <span>Relational Density</span>
+              <span className="text-primary">
+                {statsData ? `${Math.round((statsData.totalTags / (statsData.totalNodes || 1)) * 100)}%` : '78%'}
               </span>
             </div>
-          )}
-        </div>
-
-        {/* Right Area: Selected Node Inspector Panel */}
-        <div className="lg:col-span-4 h-full flex flex-col min-h-0 bg-surface rounded-2xl border border-surface-border p-5 overflow-hidden">
-          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <Share2 size={13} className="text-accent-teal" /> Entity Profile
-          </h3>
-
-          {selectedNode ? (
-            <div className="flex-1 flex flex-col justify-between overflow-y-auto space-y-5">
-              
-              <div className="space-y-4">
-                {/* Node details */}
-                <div className="flex items-start gap-3 bg-background-elevated p-3 rounded-xl border border-surface-border">
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: NODE_COLORS[selectedNode.type] || NODE_COLORS['OTHER'] }}
-                  />
-                  <div className="leading-tight">
-                    <span className="text-xs font-bold text-text-primary block">
-                      {selectedNode.label}
-                    </span>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mt-1.5">
-                      Type: {selectedNode.type}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Description details */}
-                <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
-                    Description Context
-                  </span>
-                  <div className="bg-background-elevated p-4 rounded-xl border border-surface-border text-[11px] text-text-secondary leading-relaxed font-sans max-h-52 overflow-y-auto">
-                    {selectedNode.description || 'No contextual summary description exists for this entity note.'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Connected relations statistics */}
-              <div className="space-y-3 pt-4 border-t border-surface-border">
-                {statsData && (
-                  <div className="bg-background-elevated p-3 rounded-xl border border-surface-border space-y-2">
-                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
-                      Graph Metadata Statistics
-                    </span>
-                    <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                      <span>Total Nodes:</span>
-                      <span className="font-mono text-text-primary font-bold">{statsData.totalNodes}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                      <span>Mapped Files:</span>
-                      <span className="font-mono text-text-primary font-bold">{statsData.totalDocuments}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                      <span>Total Connections:</span>
-                      <span className="font-mono text-text-primary font-bold">{edgesRef.current.length} links</span>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="w-full text-center py-2.5 rounded-lg border border-surface-border hover:bg-surface-hover transition-colors text-text-secondary hover:text-text-primary text-[10px] font-bold cursor-pointer"
-                >
-                  Unselect Entity
-                </button>
-              </div>
-
+            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary"
+                style={{
+                  width: statsData ? `${Math.min(100, Math.round((statsData.totalTags / (statsData.totalNodes || 1)) * 100))}%` : '78%',
+                }}
+              />
             </div>
-          ) : (
-            /* Inspector Idle placeholder */
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-6 border border-dashed border-surface-border rounded-xl bg-background-elevated/40">
-              <Eye size={24} className="text-text-muted mb-3 animate-pulse" />
-              <h4 className="text-[11px] font-bold text-text-primary uppercase tracking-wider">Awaiting Selection</h4>
-              <p className="text-[10px] text-text-secondary mt-1.5 leading-relaxed max-w-[150px]">
-                Click on specific visual nodes inside the graph view to inspect descriptions and connections.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
 
+          <div className="pt-md border-t border-outline-variant/30">
+            <p className="text-[10px] text-outline uppercase font-bold mb-md text-on-surface-variant tracking-wider">Entity Clusters</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-md">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <span className="flex-grow text-on-surface">Documents Ingested</span>
+                <span className="text-on-surface-variant font-code font-bold font-mono">{statsData?.totalDocuments ?? 0} nodes</span>
+              </div>
+              <div className="flex items-center gap-md">
+                <div className="w-2 h-2 rounded-full bg-secondary" />
+                <span className="flex-grow text-on-surface">Classified Tags</span>
+                <span className="text-on-surface-variant font-code font-bold font-mono">{statsData?.totalTags ?? 0} nodes</span>
+              </div>
+              <div className="flex items-center gap-md">
+                <div className="w-2 h-2 rounded-full bg-tertiary" />
+                <span className="flex-grow text-on-surface">Total Graph Nodes</span>
+                <span className="text-on-surface-variant font-code font-bold font-mono">{statsData?.totalNodes ?? 0} nodes</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist-font@1.1.0/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #020617;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .node-pulse {
+            animation: pulse 2s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        .graph-canvas {
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(77, 68, 227, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(78, 222, 163, 0.03) 0%, transparent 50%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#c3c0ff",
+                        "outline": "#918fa1",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#0f0069",
+                        "tertiary-container": "#885500",
+                        "surface-dim": "#0b1326",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "inverse-primary": "#4d44e3",
+                        "secondary-container": "#00a572",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-variant": "#2d3449",
+                        "on-surface-variant": "#c7c4d8",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed": "#002113",
+                        "surface-bright": "#31394d",
+                        "surface": "#0b1326",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "outline-variant": "#464555",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-primary": "#1d00a5",
+                        "on-tertiary-fixed": "#2a1700",
+                        "tertiary": "#ffb95f",
+                        "on-background": "#dae2fd",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-on-surface": "#283044",
+                        "error": "#ffb4ab",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary": "#472a00",
+                        "on-secondary": "#003824",
+                        "on-primary-container": "#dad7ff",
+                        "on-surface": "#dae2fd",
+                        "on-error": "#690005",
+                        "primary-fixed": "#e2dfff",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-container": "#171f33",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "inverse-surface": "#dae2fd",
+                        "surface-container-highest": "#2d3449",
+                        "on-tertiary-container": "#ffd4a4",
+                        "on-secondary-container": "#00311f",
+                        "background": "#0b1326",
+                        "primary-container": "#4f46e5",
+                        "primary": "#c3c0ff",
+                        "surface-container-high": "#222a3d",
+                        "secondary": "#4edea3",
+                        "surface-container-low": "#131b2e"
+                    },
+                    "spacing": {
+                        "xl": "32px", "margin-desktop": "40px", "gutter": "24px", "md": "16px", "sm": "8px", "lg": "24px", "xs": "4px", "3xl": "64px", "base": "8px", "2xl": "48px", "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"], "display-lg": ["Geist"], "body-md": ["Inter"], "label-sm": ["Geist"], "code": ["jetbrainsMono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "1.6"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.03em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "1.6"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-[60]">
+<div class="px-lg mb-2xl">
+<h1 class="font-display-lg text-primary text-[24px] font-bold tracking-tight">Nexus AI</h1>
+<p class="font-label-sm text-outline uppercase tracking-widest text-[10px] mt-xs">Enterprise Suite</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-body-md">Library</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-body-md">Search</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-body-md">Q&amp;A</span>
+</a>
+<a class="flex items-center gap-md bg-white/5 border-l-2 border-primary text-primary px-4 py-2 transition-transform active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-body-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-body-md">Revision</span>
+</a>
+</nav>
+<div class="px-lg mt-auto space-y-4">
+<button class="w-full bg-primary-container text-white py-3 rounded-lg font-label-sm uppercase tracking-wider hover:opacity-90 transition-opacity">
+                New Ingestion
+            </button>
+<div class="pt-lg border-t border-outline-variant/30">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface py-2" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-label-sm">Status</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface py-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant z-50 shadow-sm flex justify-between items-center px-gutter">
+<div class="flex items-center gap-xl w-1/2">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-2 pl-10 pr-4 text-label-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Query entity or relationship..." type="text"/>
+</div>
+<nav class="hidden lg:flex items-center gap-lg">
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">Docs</a>
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">API</a>
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">Support</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-sm mr-md border-r border-outline-variant pr-md">
+<button class="p-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-full transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary font-label-sm px-6 py-2 rounded-full hover:opacity-90 transition-opacity">
+                Upgrade
+            </button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-sm cursor-pointer">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a person with short dark hair, wearing a clean, modern grey sweatshirt, set against a minimalist architectural background with soft shadows and neutral tones, representing a high-tech corporate user persona." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL4Pl3j-88CEa5eczavMo8xRAJ8jD89bqi-M8ntCULCu0DOn9KdC0tLvmP7gGqtnidcDZg38FFIBQZ2ox9wUeiySoZ-SctqHQ8-UuVgju3ibc6ouNi2dpYPH0OJHq-qiDS61IsK1ccCF7VYA4dnfAgXcPYZaJxUS5ED6zKBRDwOYLz6MWHCTPzE6-1xDFZPJc2zSdExB-VMTxz_lZcFAzwEBWMUh_YrjE7ymgmk-UYR30MDpSBHV2lo5qC6OtRefaEh_yhp1Q5hzs"/>
+</div>
+</div>
+</header>
+<!-- Main Content: Knowledge Graph Canvas -->
+<main class="ml-[240px] pt-16 h-screen w-[calc(100%-240px)] relative overflow-hidden graph-canvas">
+<!-- Interactive Graph Background Placeholder (Simulated via SVG and JS) -->
+<div class="w-full h-full cursor-grab active:cursor-grabbing" id="graph-viewport">
+<svg class="w-full h-full" id="svg-graph">
+<!-- Links (Edges) -->
+<g stroke="rgba(255, 255, 255, 0.05)" stroke-width="1">
+<line x1="400" x2="600" y1="300" y2="450"></line>
+<line x1="400" x2="250" y1="300" y2="200"></line>
+<line x1="600" x2="800" y1="450" y2="350"></line>
+<line x1="600" x2="550" y1="450" y2="600"></line>
+<line x1="250" x2="150" y1="200" y2="400"></line>
+<line stroke="rgba(195, 192, 255, 0.2)" stroke-width="2" x1="800" x2="950" y1="350" y2="500"></line>
+</g>
+<!-- Nodes -->
+<!-- Technology Node -->
+<g class="node cursor-pointer group" transform="translate(400, 300)">
+<circle class="fill-surface-container-highest stroke-primary stroke-2 transition-all group-hover:r-14" r="12"></circle>
+<circle class="fill-primary node-pulse" r="6"></circle>
+<text class="fill-on-surface-variant font-label-sm text-[10px] pointer-events-none" text-anchor="middle" y="30">Quantum Computing</text>
+</g>
+<!-- People Node (Active) -->
+<g class="node cursor-pointer group" id="active-node" transform="translate(600, 450)">
+<circle class="fill-primary/20 stroke-primary stroke-2 shadow-[0_0_15px_rgba(195,192,255,0.5)] transition-all" r="16"></circle>
+<circle class="fill-primary" r="8"></circle>
+<text class="fill-on-surface font-label-sm text-[11px] font-bold pointer-events-none" text-anchor="middle" y="35">Dr. Elena Volkov</text>
+</g>
+<!-- Concept Node -->
+<g class="node cursor-pointer group" transform="translate(250, 200)">
+<circle class="fill-surface-container-highest stroke-secondary stroke-2 transition-all group-hover:r-12" r="10"></circle>
+<circle class="fill-secondary" r="5"></circle>
+<text class="fill-on-surface-variant font-label-sm text-[10px] pointer-events-none" text-anchor="middle" y="25">Ethics AI</text>
+</g>
+<!-- Places Node -->
+<g class="node cursor-pointer group" transform="translate(800, 350)">
+<circle class="fill-surface-container-highest stroke-tertiary stroke-2 transition-all group-hover:r-12" r="10"></circle>
+<circle class="fill-tertiary" r="5"></circle>
+<text class="fill-on-surface-variant font-label-sm text-[10px] pointer-events-none" text-anchor="middle" y="25">Zurich Lab</text>
+</g>
+<!-- Technology Node -->
+<g class="node cursor-pointer group" transform="translate(950, 500)">
+<circle class="fill-surface-container-highest stroke-primary stroke-2 transition-all group-hover:r-14" r="12"></circle>
+<circle class="fill-primary" r="6"></circle>
+<text class="fill-on-surface-variant font-label-sm text-[10px] pointer-events-none" text-anchor="middle" y="30">Edge Inference</text>
+</g>
+</svg>
+</div>
+<!-- Node Hover Detail Tooltip -->
+<div class="absolute top-[340px] left-[630px] glass-panel p-md rounded-xl w-64 shadow-2xl z-40 animate-in fade-in zoom-in duration-300" id="tooltip">
+<div class="flex justify-between items-start mb-sm">
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest">Person</span>
+<span class="text-on-surface-variant text-[10px]">Rank: 0.94</span>
+</div>
+<h3 class="font-headline-lg text-[16px] text-on-surface mb-xs">Dr. Elena Volkov</h3>
+<p class="text-on-surface-variant font-body-md text-[12px] leading-relaxed mb-md">
+                Lead researcher in Neural Topography. Collaborated on "Project Chimera" at Zurich Lab.
+            </p>
+<div class="grid grid-cols-2 gap-sm">
+<div class="bg-white/5 p-2 rounded-lg border border-outline-variant/30">
+<p class="text-[9px] text-outline uppercase font-bold">Connections</p>
+<p class="text-on-surface font-code text-[14px]">142</p>
+</div>
+<div class="bg-white/5 p-2 rounded-lg border border-outline-variant/30">
+<p class="text-[9px] text-outline uppercase font-bold">Influence</p>
+<p class="text-secondary font-code text-[14px]">High</p>
+</div>
+</div>
+<button class="w-full mt-md bg-white/10 hover:bg-white/15 text-on-surface text-[12px] py-1.5 rounded transition-colors border border-white/10">
+                View Full Profile
+            </button>
+</div>
+<!-- Floating Control Panel -->
+<div class="absolute bottom-lg left-1/2 -translate-x-1/2 flex items-center gap-sm p-2 glass-panel rounded-full shadow-lg z-50">
+<div class="flex items-center gap-1 border-r border-outline-variant pr-sm ml-sm">
+<button class="p-2 bg-primary/20 text-primary rounded-full hover:bg-primary/30 transition-all tooltip" title="Concepts">
+<span class="material-symbols-outlined text-[20px]">lightbulb</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full transition-all" title="People">
+<span class="material-symbols-outlined text-[20px]">group</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full transition-all" title="Technologies">
+<span class="material-symbols-outlined text-[20px]">precision_manufacturing</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full transition-all" title="Places">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</button>
+</div>
+<div class="flex items-center gap-1 px-sm">
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+<span class="font-code text-[12px] text-on-surface-variant min-w-[32px] text-center">85%</span>
+<button class="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
+<span class="material-symbols-outlined text-[20px]">remove</span>
+</button>
+</div>
+<button class="flex items-center gap-sm px-4 py-2 bg-surface-bright text-on-surface rounded-full font-label-sm border border-outline-variant hover:bg-white/10 transition-colors mr-1">
+<span class="material-symbols-outlined text-[18px]">recenter</span>
+                Recenter
+            </button>
+</div>
+<!-- Sidebar Legend / Detail Panel (Right) -->
+<div class="absolute top-lg right-lg w-72 glass-panel rounded-2xl p-lg z-40 hidden xl:block">
+<div class="flex items-center justify-between mb-lg">
+<h4 class="font-headline-lg text-[18px]">Network Stats</h4>
+<span class="material-symbols-outlined text-outline">info</span>
+</div>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-[11px] mb-xs">
+<span class="text-outline uppercase font-bold">Node Density</span>
+<span class="text-primary">78%</span>
+</div>
+<div class="h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[78%]"></div>
+</div>
+</div>
+<div class="pt-md border-t border-outline-variant/30">
+<p class="text-[10px] text-outline uppercase font-bold mb-md">Key Clusters</p>
+<div class="space-y-3">
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[12px] flex-1">Neural Engineering</span>
+<span class="text-[11px] text-on-surface-variant font-code">24 nodes</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-[12px] flex-1">Global Ethics Framework</span>
+<span class="text-[11px] text-on-surface-variant font-code">18 nodes</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="text-[12px] flex-1">Edge Compute Infrastructure</span>
+<span class="text-[11px] text-on-surface-variant font-code">32 nodes</span>
+</div>
+</div>
+</div>
+<div class="mt-xl pt-lg border-t border-outline-variant/30">
+<button class="w-full bg-white/5 hover:bg-white/10 border border-outline-variant py-2.5 rounded-xl font-label-sm text-[12px] flex items-center justify-center gap-sm transition-all">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Matrix
+                    </button>
+</div>
+</div>
+</div>
+<!-- Atmospheric Blurred Nodes in Corners -->
+<div class="absolute -top-32 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="absolute -bottom-32 -right-32 w-96 h-96 bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+</main>
+<script>
+        // Simple Interaction: Tooltip visibility toggle
+        const activeNode = document.getElementById('active-node');
+        const tooltip = document.getElementById('tooltip');
+        let tooltipVisible = true;
+
+        activeNode.addEventListener('click', (e) => {
+            e.stopPropagation();
+            tooltipVisible = !tooltipVisible;
+            tooltip.style.display = tooltipVisible ? 'block' : 'none';
+        });
+
+        document.getElementById('graph-viewport').addEventListener('click', () => {
+            tooltip.style.display = 'none';
+            tooltipVisible = false;
+        });
+
+        // Basic panning simulation
+        const svg = document.getElementById('svg-graph');
+        let isPanning = false;
+        let startPoint = { x: 0, y: 0 };
+        let endPoint = { x: 0, y: 0 };
+
+        svg.addEventListener('mousedown', (e) => {
+            isPanning = true;
+            startPoint = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            endPoint = { x: e.clientX, y: e.clientY };
+            const dx = endPoint.x - startPoint.x;
+            const dy = endPoint.y - startPoint.y;
+            // Simplified movement logic - in a real app we'd adjust the viewBox
+            const nodes = svg.querySelectorAll('.node, line');
+            nodes.forEach(node => {
+                const currentTransform = node.getAttribute('transform');
+                if(node.tagName === 'line') {
+                    node.setAttribute('x1', parseInt(node.getAttribute('x1')) + dx/10);
+                    node.setAttribute('y1', parseInt(node.getAttribute('y1')) + dy/10);
+                    node.setAttribute('x2', parseInt(node.getAttribute('x2')) + dx/10);
+                    node.setAttribute('y2', parseInt(node.getAttribute('y2')) + dy/10);
+                } else if(currentTransform) {
+                    const coords = currentTransform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                    if(coords) {
+                        const newX = parseFloat(coords[1]) + dx/10;
+                        const newY = parseFloat(coords[2]) + dy/10;
+                        node.setAttribute('transform', `translate(${newX}, ${newY})`);
+                    }
+                }
+            });
+            startPoint = endPoint;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isPanning = false;
+        });
+
+        // Toggle category visibility micro-interaction
+        document.querySelectorAll('.floating-panel button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-primary/20');
+                this.classList.toggle('text-primary');
+                this.classList.toggle('text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

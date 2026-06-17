@@ -18,6 +18,7 @@ import { GraphPage } from './pages/GraphPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { RevisionPage } from './pages/RevisionPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StatusPage } from './pages/StatusPage';
 
 /**
  * Auth callback handler — extracts JWT from URL params after Google OAuth redirect.
@@ -107,6 +108,7 @@ export function App() {
         <Route path="graph" element={<GraphPage />} />
         <Route path="recommendations" element={<RecommendationsPage />} />
         <Route path="revision" element={<RevisionPage />} />
+        <Route path="status" element={<StatusPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

@@ -1,26 +1,11 @@
 // apps/frontend/src/pages/SettingsPage.tsx
 /**
- * Redesigned Settings Page.
- * Implements tabbed navigation (Account, Integrations, Preferences).
- * Features interactive toggle switches, profile tags, and vector index sync status.
+ * SettingsPage — Workspace System Settings.
+ * Supports tabbed configurations for Account details, Google Drive indices, and toggles.
  */
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Settings,
-  User,
-  HardDrive,
-  Bell,
-  Shield,
-  Palette,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  Check,
-  ExternalLink,
-} from 'lucide-react';
-
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -39,11 +24,15 @@ export function SettingsPage() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'drive' | 'prefs'>('profile');
 
-  // Preferences interactive states
+  // Preferences toggles state
   const [reminders, setReminders] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [soundFeedback, setSoundFeedback] = useState(false);
+  const [ocrExtraction, setOcrExtraction] = useState(false);
+  const [syncInterval, setSyncInterval] = useState(15);
 
+  // ─── Query: Live sync status ───
   const { data: syncStatus } = useQuery<SyncStatus>({
     queryKey: ['drive-status'],
     queryFn: async () => {
@@ -53,252 +42,342 @@ export function SettingsPage() {
   });
 
   return (
-    <div className="animate-fade-in max-w-4xl mx-auto space-y-6 select-none">
-      
+    <div className="animate-fade-in max-w-5xl mx-auto space-y-xl select-none w-full">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-extrabold text-text-primary uppercase tracking-wider">
-          System Settings
-        </h1>
-        <p className="text-xs text-text-secondary mt-1">
-          Configure account properties, integrations, and preferences.
-        </p>
+      <div className="mb-xl">
+        <h2 className="font-display-lg text-headline-lg text-on-surface">Settings</h2>
+        <p className="text-on-surface-variant mt-xs text-xs">Configure your personal interface and AI workspace parameters.</p>
       </div>
 
-      {/* Tabs navigation list */}
-      <div className="flex bg-surface border border-surface-border rounded-xl p-1 max-w-md">
+      {/* Settings Navigation Tabs */}
+      <div className="flex gap-xl border-b border-outline-variant mb-xl text-xs">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+          className={`pb-md font-label-sm font-bold transition-all flex items-center gap-sm cursor-pointer border-b-2 ${
             activeTab === 'profile'
-              ? 'bg-surface-hover text-accent-teal border border-surface-border shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              ? 'text-primary border-primary'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
           }`}
         >
-          <User size={13} />
-          <span>Account Profile</span>
+          <span className="material-symbols-outlined text-[20px]">person</span>
+          <span>Profile</span>
         </button>
         <button
           onClick={() => setActiveTab('drive')}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+          className={`pb-md font-label-sm font-bold transition-all flex items-center gap-sm cursor-pointer border-b-2 ${
             activeTab === 'drive'
-              ? 'bg-surface-hover text-accent-teal border border-surface-border shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              ? 'text-primary border-primary'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
           }`}
         >
-          <HardDrive size={13} />
-          <span>Google Drive</span>
+          <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+          <span>Drive Connector</span>
         </button>
         <button
           onClick={() => setActiveTab('prefs')}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+          className={`pb-md font-label-sm font-bold transition-all flex items-center gap-sm cursor-pointer border-b-2 ${
             activeTab === 'prefs'
-              ? 'bg-surface-hover text-accent-teal border border-surface-border shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              ? 'text-primary border-primary'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
           }`}
         >
-          <Palette size={13} />
+          <span className="material-symbols-outlined text-[20px]">tune</span>
           <span>Preferences</span>
         </button>
       </div>
 
-      {/* Content panes based on activeTab */}
-      <div className="bg-surface rounded-2xl border border-surface-border p-6 shadow-sm min-h-[300px] flex flex-col justify-between">
-        
-        {/* TAB 1: Profile and Account details */}
+      {/* Tab Panels */}
+      <div className="min-h-[360px]">
+        {/* Tab 1: Profile */}
         {activeTab === 'profile' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="border-b border-surface-border pb-4">
-              <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">
-                Google Authorized Account
-              </h3>
-              <p className="text-[11px] text-text-muted mt-1">
-                Account properties synced during authorization.
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-xl animate-fade-in">
+            <div className="md:col-span-1">
+              <h3 className="font-headline-lg text-body-lg font-semibold text-sm">User Identity</h3>
+              <p className="text-on-surface-variant text-label-sm mt-xs text-[11px]">Personal details and account security markers.</p>
             </div>
-
-            <div className="flex items-center gap-4 bg-background-elevated p-4 rounded-xl border border-surface-border max-w-xl">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-full border border-surface-border" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-accent-purple/10 border border-accent-purple/20 text-accent-purple flex items-center justify-center text-sm font-bold font-mono">
-                  {user?.name?.charAt(0) ?? '?'}
-                </div>
-              )}
-              <div className="leading-tight">
-                <span className="text-xs font-bold text-text-primary block">
-                  {user?.name || 'Authorized User'}
-                </span>
-                <p className="text-[11px] text-text-secondary mt-1">
-                  {user?.email || 'No email synced'}
-                </p>
-                <span className="text-[9px] font-bold text-success bg-success/5 border border-success/15 px-2 py-0.5 rounded-full inline-block mt-2">
-                  Active Member
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: Google Drive syncing details */}
-        {activeTab === 'drive' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="border-b border-surface-border pb-4">
-              <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">
-                Google Drive Synchronization
-              </h3>
-              <p className="text-[11px] text-text-muted mt-1">
-                Vector space parameters and cloud indexing statistics.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border border-surface-border bg-background-elevated space-y-3">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
-                  Connector Parameters
-                </span>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Connection Status:</span>
-                    <span className="font-semibold text-success flex items-center gap-1">
-                      <CheckCircle2 size={12} /> Syncing
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Indexed Documents:</span>
-                    <span className="font-mono text-text-primary font-bold">
-                      {syncStatus?.documents.indexed ?? 0} files
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Total Folder Files:</span>
-                    <span className="font-mono text-text-primary font-bold">
-                      {syncStatus?.documents.total ?? 0} files
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Last Sync Run:</span>
-                    <span className="text-text-primary font-medium">
-                      {syncStatus?.lastSyncAt ? new Date(syncStatus.lastSyncAt).toLocaleString() : 'Never'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Data disclaimer details */}
-              <div className="p-4 rounded-xl border border-surface-border bg-background-elevated flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-2">
-                    Repository Folder Context
-                  </span>
-                  <p className="text-[11px] text-text-secondary leading-relaxed">
-                    The platform scans only the document catalog located under the <code className="px-1.5 py-0.5 rounded bg-accent-purple/10 border border-accent-purple/20 text-accent-purple font-mono text-[10px]">KnowledgeOS/</code> root workspace folder inside Google Drive.
-                  </p>
-                  {syncStatus?.driveFolderUrl && (
-                    <a
-                      href={syncStatus.driveFolderUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-accent-teal hover:text-accent-teal/80 underline font-bold mt-3 cursor-pointer"
-                    >
-                      <ExternalLink size={12} />
-                      Open KnowledgeOS folder
-                    </a>
+            <div className="md:col-span-2 glass-surface p-lg rounded-xl space-y-lg text-xs bg-surface-container">
+              <div className="flex items-center gap-xl flex-wrap">
+                <div className="relative group cursor-pointer w-24 h-24 rounded-2xl overflow-hidden border-2 border-outline-variant flex-shrink-0">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-primary/10 flex items-center justify-center text-xl font-mono font-bold text-primary">
+                      {user?.name?.charAt(0) ?? '?'}
+                    </div>
                   )}
                 </div>
-                <div className="text-[10px] text-text-muted flex items-center gap-1.5 mt-4">
-                  <Shield size={12} className="text-accent-teal" /> Read-only sync credentials.
+                <div className="leading-tight">
+                  <p className="font-body-md font-semibold text-sm text-on-surface">{user?.name || 'Julian Sterling'}</p>
+                  <p className="text-on-surface-variant text-[11px] mt-1">{user?.email || 'julian@nexusai.io'}</p>
+                  <div className="flex gap-sm mt-md">
+                    <span className="bg-secondary/10 text-secondary border border-secondary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold">
+                      Pro User
+                    </span>
+                    <span className="bg-surface-variant text-on-surface-variant px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold">
+                      Enterprise Tier
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-lg pt-md">
+                <div className="flex flex-col gap-xs">
+                  <label className="text-label-sm text-on-surface-variant font-bold text-[11px]">First Name</label>
+                  <input
+                    className="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all text-xs"
+                    type="text"
+                    defaultValue={user?.name?.split(' ')[0] || 'Julian'}
+                  />
+                </div>
+                <div className="flex flex-col gap-xs">
+                  <label className="text-label-sm text-on-surface-variant font-bold text-[11px]">Last Name</label>
+                  <input
+                    className="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all text-xs"
+                    type="text"
+                    defaultValue={user?.name?.split(' ').slice(1).join(' ') || 'Sterling'}
+                  />
+                </div>
+                <div className="col-span-2 flex flex-col gap-xs">
+                  <label className="text-label-sm text-on-surface-variant font-bold text-[11px]">Role / Bio</label>
+                  <textarea
+                    className="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none text-xs"
+                    rows={3}
+                    defaultValue="Senior Solutions Architect specializing in LLM knowledge integration and enterprise vector databases."
+                  />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 3: Preferences and configurations checkboxes */}
+        {/* Tab 2: Drive Connector */}
+        {activeTab === 'drive' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-xl animate-fade-in">
+            <div className="md:col-span-1">
+              <h3 className="font-headline-lg text-body-lg font-semibold text-sm">Sync Constraints</h3>
+              <p className="text-on-surface-variant text-label-sm mt-xs text-[11px]">Define how Nexus AI interacts with your external cloud storage providers.</p>
+            </div>
+            <div className="md:col-span-2 space-y-md text-xs">
+              {/* Connector Card */}
+              <div className="glass-surface p-lg rounded-xl flex items-center justify-between bg-surface-container flex-wrap gap-md">
+                <div className="flex items-center gap-lg">
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center border border-outline-variant flex-shrink-0">
+                    <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      add_to_drive
+                    </span>
+                  </div>
+                  <div className="leading-tight">
+                    <h4 className="font-body-md font-medium text-sm text-on-surface">Google Drive Folder</h4>
+                    <div className="flex items-center gap-xs mt-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary pulse-dot"></span>
+                      <span className="text-label-sm text-secondary font-bold uppercase tracking-wider text-[10px]">Connected</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-md">
+                  {syncStatus?.driveFolderUrl && (
+                    <button
+                      onClick={() => window.open(syncStatus.driveFolderUrl!, '_blank')}
+                      className="text-label-sm text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer font-bold"
+                    >
+                      Open Folder
+                    </button>
+                  )}
+                  <div className="w-px h-6 bg-outline-variant"></div>
+                  <span className="text-[10px] font-mono text-on-surface-variant">ID: {syncStatus?.driveFolderId?.slice(0, 10) || 'default_dir'}...</span>
+                </div>
+              </div>
+
+              {/* Inactive Microsoft Sync connection mock */}
+              <div className="glass-surface p-lg rounded-xl flex items-center justify-between border-dashed border-outline-variant opacity-60 hover:opacity-100 transition-opacity bg-surface-container/40 flex-wrap gap-md">
+                <div className="flex items-center gap-lg">
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center border border-outline-variant flex-shrink-0">
+                    <span className="material-symbols-outlined text-on-surface-variant text-3xl">cloud_queue</span>
+                  </div>
+                  <div className="leading-tight">
+                    <h4 className="font-body-md font-medium text-sm text-on-surface">OneDrive Business</h4>
+                    <p className="text-label-sm text-on-surface-variant mt-0.5">Not connected</p>
+                  </div>
+                </div>
+                <button className="bg-surface-variant text-on-surface px-4 py-1.5 rounded-lg font-label-sm hover:bg-outline-variant transition-colors text-xs font-bold cursor-pointer">
+                  Setup
+                </button>
+              </div>
+
+              {/* Detailed Sync Settings */}
+              <div className="glass-surface p-lg rounded-xl bg-surface-container">
+                <h4 className="font-body-md font-semibold text-sm mb-lg text-on-surface">Global Sync Settings</h4>
+                <div className="space-y-lg">
+                  <div className="flex justify-between items-center py-2">
+                    <div className="leading-tight">
+                      <p className="font-body-md text-on-surface">Auto-Ingestion</p>
+                      <p className="text-label-sm text-on-surface-variant text-[11px] mt-0.5">Automatically index new files detected in Drive roots.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoSync}
+                        onChange={() => setAutoSync(!autoSync)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                    </label>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <div className="leading-tight">
+                      <p className="font-body-md text-on-surface">OCR Text Extraction</p>
+                      <p className="text-label-sm text-on-surface-variant text-[11px] mt-0.5">Enable Optical Character Recognition for scanned imagery/PDFs.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={ocrExtraction}
+                        onChange={() => setOcrExtraction(!ocrExtraction)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                    </label>
+                  </div>
+                  <div className="pt-md border-t border-outline-variant/30">
+                    <label className="text-label-sm text-on-surface-variant block mb-sm font-bold uppercase tracking-wider text-[10px]">
+                      Sync Interval (Minutes)
+                    </label>
+                    <div className="flex items-center gap-xl">
+                      <input
+                        className="flex-grow accent-primary h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer"
+                        max="60"
+                        min="5"
+                        step="5"
+                        type="range"
+                        value={syncInterval}
+                        onChange={(e) => setSyncInterval(Number(e.target.value))}
+                      />
+                      <span className="text-body-md font-code text-primary w-12 text-right font-mono font-bold">{syncInterval}m</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Preferences */}
         {activeTab === 'prefs' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="border-b border-surface-border pb-4">
-              <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">
-                Preferences Configurations
-              </h3>
-              <p className="text-[11px] text-text-muted mt-1">
-                Customize workspace display layouts and ingestion runs.
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-xl animate-fade-in">
+            <div className="md:col-span-1">
+              <h3 className="font-headline-lg text-body-lg font-semibold text-sm">Interface Experience</h3>
+              <p className="text-on-surface-variant text-label-sm mt-xs text-[11px]">Tailor the visual density and system notifications to your workflow.</p>
             </div>
-
-            <div className="space-y-4 max-w-xl">
-              {/* Reminder switch */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-surface-border bg-background-elevated">
-                <div className="leading-tight">
-                  <span className="text-xs font-bold text-text-primary">
-                    Daily review email reminders
-                  </span>
-                  <p className="text-[10px] text-text-muted mt-1">
-                    Send spaced repetition study cards schedule warnings.
-                  </p>
+            <div className="md:col-span-2 space-y-md text-xs">
+              {/* Appearance group layout */}
+              <div className="glass-surface p-lg rounded-xl bg-surface-container">
+                <h4 className="font-body-md font-semibold text-sm mb-lg text-on-surface">Visual Theme</h4>
+                <div className="grid grid-cols-3 gap-md">
+                  <button className="flex flex-col gap-sm p-sm rounded-lg border-2 border-primary bg-primary-container/10 text-left">
+                    <div className="w-full h-16 bg-surface rounded-md border border-outline-variant relative overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-4 bg-surface-container-lowest"></div>
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary/20"></div>
+                    </div>
+                    <span className="text-label-sm text-primary font-bold text-[10px] tracking-wide mt-2">Dark Indigo (Default)</span>
+                  </button>
+                  <button className="flex flex-col gap-sm p-sm rounded-lg border-2 border-transparent hover:border-outline-variant transition-all text-left opacity-50 cursor-pointer">
+                    <div className="w-full h-16 bg-white rounded-md border border-gray-200 relative overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-4 bg-gray-50"></div>
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-100"></div>
+                    </div>
+                    <span className="text-label-sm text-on-surface-variant text-[10px] mt-2">Light Pro</span>
+                  </button>
+                  <button className="flex flex-col gap-sm p-sm rounded-lg border-2 border-transparent hover:border-outline-variant transition-all text-left opacity-50 cursor-pointer">
+                    <div className="w-full h-16 bg-slate-900 rounded-md border border-slate-800 relative overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-4 bg-black"></div>
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-500/30"></div>
+                    </div>
+                    <span className="text-label-sm text-on-surface-variant text-[10px] mt-2">OLED Pitch Black</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setReminders(!reminders)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-                    reminders ? 'bg-accent-teal justify-end' : 'bg-surface-border justify-start'
-                  }`}
-                >
-                  <span className="w-4 h-4 rounded-full bg-background shadow-md block" />
-                </button>
               </div>
 
-              {/* Auto Ingest Switch */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-surface-border bg-background-elevated">
-                <div className="leading-tight">
-                  <span className="text-xs font-bold text-text-primary">
-                    Continuous sync listener
-                  </span>
-                  <p className="text-[10px] text-text-muted mt-1">
-                    Auto-trigger parsing algorithms on file uploads inside Google Drive.
-                  </p>
+              {/* Preferences toggles */}
+              <div className="glass-surface p-lg rounded-xl space-y-lg bg-surface-container">
+                <div className="flex justify-between items-center py-2">
+                  <div className="leading-tight">
+                    <p className="font-body-md text-on-surface">Compact Mode</p>
+                    <p className="text-label-sm text-on-surface-variant text-[11px] mt-0.5">Reduce padding sizes for denser tabular layout representation.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={compact}
+                      onChange={() => setCompact(!compact)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                  </label>
                 </div>
-                <button
-                  onClick={() => setAutoSync(!autoSync)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-                    autoSync ? 'bg-accent-teal justify-end' : 'bg-surface-border justify-start'
-                  }`}
-                >
-                  <span className="w-4 h-4 rounded-full bg-background shadow-md block" />
-                </button>
+                <div className="flex justify-between items-center py-2">
+                  <div className="leading-tight">
+                    <p className="font-body-md text-on-surface">System Notifications</p>
+                    <p className="text-label-sm text-on-surface-variant text-[11px] mt-0.5">Recieve browser notifications for parsing progress or sync reports.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={reminders}
+                      onChange={() => setReminders(!reminders)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                  </label>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <div className="leading-tight">
+                    <p className="font-body-md text-on-surface">Sound Feedback</p>
+                    <p className="text-label-sm text-on-surface-variant text-[11px] mt-0.5">Enable audio cues for user clicks and interface notifications.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundFeedback}
+                      onChange={() => setSoundFeedback(!soundFeedback)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                  </label>
+                </div>
               </div>
 
-              {/* Compact Switch */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-surface-border bg-background-elevated">
-                <div className="leading-tight">
-                  <span className="text-xs font-bold text-text-primary">
-                    Compact list view rendering
-                  </span>
-                  <p className="text-[10px] text-text-muted mt-1">
-                    Squeeze padding layouts inside document tables.
-                  </p>
+              {/* JSON back-up tools */}
+              <div className="glass-surface p-lg rounded-xl bg-surface-container">
+                <h4 className="font-body-md font-semibold text-sm mb-lg text-on-surface">Backup & Sync Options</h4>
+                <div className="flex gap-md">
+                  <button className="flex-grow bg-surface-container-high border border-outline-variant py-2 rounded-lg font-label-sm hover:bg-surface-bright transition-colors flex items-center justify-center gap-xs cursor-pointer">
+                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    <span>Backup Settings</span>
+                  </button>
+                  <button className="flex-grow bg-surface-container-high border border-outline-variant py-2 rounded-lg font-label-sm hover:bg-surface-bright transition-colors flex items-center justify-center gap-xs cursor-pointer">
+                    <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+                    <span>Restore Sync</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setCompactMode(!compactMode)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-                    compactMode ? 'bg-accent-teal justify-end' : 'bg-surface-border justify-start'
-                  }`}
-                >
-                  <span className="w-4 h-4 rounded-full bg-background shadow-md block" />
-                </button>
               </div>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Footer specifications info */}
-        <div className="border-t border-surface-border pt-4 mt-8 flex items-center justify-between text-[10px] text-text-muted flex-shrink-0">
-          <span>KnowledgeOS v0.1.0 · Product Engine Logs Verified</span>
-          <span className="flex items-center gap-1 text-accent-teal">
-            <Check size={11} /> Vector Space Active
-          </span>
-        </div>
-
+      {/* Save panel footer triggers */}
+      <div className="mt-2xl flex justify-end gap-md pt-xl border-t border-outline-variant/30">
+        <button
+          onClick={() => setActiveTab('profile')}
+          className="px-xl py-2 rounded-lg font-label-sm text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs font-bold"
+        >
+          Discard Changes
+        </button>
+        <button
+          onClick={() => alert('Settings Saved Successfully!')}
+          className="px-xl py-2 rounded-lg font-label-sm bg-primary-container text-white shadow-lg shadow-primary-container/15 hover:opacity-90 active:scale-95 transition-all cursor-pointer text-xs font-bold"
+        >
+          Save Workspace
+        </button>
       </div>
     </div>
   );

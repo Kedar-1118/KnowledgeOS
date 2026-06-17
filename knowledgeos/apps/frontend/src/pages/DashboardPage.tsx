@@ -1,29 +1,11 @@
 // apps/frontend/src/pages/DashboardPage.tsx
 /**
- * Redesigned central dashboard page.
- * Uses bento grid formatting, micro-steppers for synchronization pipelines,
- * categorized metadata logs, and advanced dashboard gauges.
+ * DashboardPage — Premium Bento Grid Dashboard.
+ * Focuses on real-time data ingestion stats and actual index history.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  FileText,
-  RefreshCw,
-  AlertCircle,
-  Loader2,
-  FolderSync,
-  Database,
-  Brain,
-  Search,
-  Upload,
-  Network,
-  CheckCircle2,
-  Clock3,
-  ArrowRight,
-  TrendingUp,
-  ExternalLink,
-} from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -42,30 +24,53 @@ interface SyncStatus {
   activeJobs: number;
 }
 
+interface DocumentItem {
+  id: string;
+  title: string;
+  fileType: string;
+  status: string;
+  createdAt: string;
+  fileSizeBytes: number;
+}
+
+interface ListResponse {
+  documents: DocumentItem[];
+}
+
 export function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
+  // ─── Query: Live Sync Status ───
   const { data: syncStatus } = useQuery<SyncStatus>({
     queryKey: ['drive-status'],
     queryFn: async () => {
-      const res = await api.get<{ success: boolean; data: SyncStatus }>(
-        '/api/drive/status'
-      );
+      const res = await api.get<{ success: boolean; data: SyncStatus }>('/api/drive/status');
       return res.data.data;
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
+  // ─── Query: Recently Ingested Documents ───
+  const { data: recentData, isLoading: isRecentLoading } = useQuery<ListResponse>({
+    queryKey: ['recent-documents'],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: ListResponse }>('/api/documents?limit=5');
+      return res.data.data;
+    },
+    refetchInterval: 10000,
+  });
+
+  // ─── Mutation: Synchronize Now ───
   const syncMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post('/api/drive/sync-now');
       return res.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['drive-status'],
-      });
+      void queryClient.invalidateQueries({ queryKey: ['drive-status'] });
+      void queryClient.invalidateQueries({ queryKey: ['recent-documents'] });
     },
   });
 
@@ -76,411 +81,209 @@ export function DashboardPage() {
   const failed = syncStatus?.documents.failed ?? 0;
   const processing = syncStatus?.documents.processing ?? 0;
 
-  const health = total > 0 ? Math.round((indexed / total) * 100) : 0;
+  const healthRatio = total > 0 ? Math.round((indexed / total) * 100) : 0;
+  const strokeDashoffset = 251.32 - (251.32 * (healthRatio / 100));
 
-  // Semi-circle gauge calculation
-  const radius = 50;
-  const strokeWidth = 8;
-  const circumference = Math.PI * radius; // Half-circle
-  const strokeDashoffset = circumference - (health / 100) * circumference;
+  const isSyncing = syncStatus?.isRunning || syncMutation.isPending;
 
   return (
-    <div className="relative space-y-8 animate-fade-in select-none">
-      {/* Top Welcome Panel */}
-      <div className="rounded-2xl border border-surface-border bg-gradient-to-br from-surface to-background-elevated p-8 relative overflow-hidden shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold text-accent-purple tracking-widest uppercase">
-              Workspace Overview
-            </span>
-            <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">
-              {greeting}, {user?.name?.split(' ')[0] ?? 'Explorer'}
-            </h1>
-            <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
-              Your semantic repository is active. New documents uploaded to Google Drive will be automatically scanned, broken into context nodes, and indexed for semantic extraction.
-            </p>
-            {syncStatus?.driveFolderUrl && (
-              <a
-                href={syncStatus.driveFolderUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-accent-teal hover:text-accent-teal/80 underline font-bold mt-2 cursor-pointer"
-              >
-                <ExternalLink size={12} />
-                Open your KnowledgeOS folder in Google Drive
-              </a>
+    <div className="space-y-2xl animate-fade-in select-none">
+      {/* Greeting Header */}
+      <header className="flex flex-col gap-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-xs">
+          <h2 className="font-display-lg text-display-lg font-semibold text-on-surface">
+            {greeting}, {user?.name?.split(' ')[0] ?? 'Alex'}.
+          </h2>
+          <p className="text-on-surface-variant font-body-lg text-sm">Here's a snapshot of your intelligence network today.</p>
+        </div>
+        <button
+          onClick={() => syncMutation.mutate()}
+          disabled={isSyncing}
+          className="px-lg py-sm bg-primary-container text-on-primary-container font-label-sm text-xs rounded hover:opacity-90 transition-all border-t border-white/10 active:scale-95 cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+        >
+          {isSyncing ? 'Syncing...' : 'Sync drive'}
+        </button>
+      </header>
+
+      {/* Key Stat Cards */}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-lg">
+        <div className="glass-surface p-lg rounded-xl flex flex-col gap-sm group hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-label-sm text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Documents Indexed</span>
+            <span className="material-symbols-outlined text-primary">description</span>
+          </div>
+          <div className="text-headline-lg font-display-lg text-on-surface text-3xl font-bold">{indexed}</div>
+          <div className="text-secondary font-label-sm text-[11px] font-bold">Files cataloged: {total}</div>
+        </div>
+
+        <div className="glass-surface p-lg rounded-xl flex flex-col gap-sm group hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-label-sm text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Sync Coverage</span>
+            <span className="material-symbols-outlined text-primary">database</span>
+          </div>
+          <div className="text-headline-lg font-display-lg text-on-surface text-3xl font-bold">{healthRatio}%</div>
+          <div className="flex items-center gap-xs">
+            <div className="h-1 flex-1 bg-surface-container rounded-full overflow-hidden">
+              <div className="h-full bg-primary" style={{ width: `${healthRatio}%` }}></div>
+            </div>
+            <span className="text-on-surface-variant font-label-sm text-[11px] font-bold">{healthRatio}%</span>
+          </div>
+        </div>
+
+        <div className="glass-surface p-lg rounded-xl flex flex-col gap-sm group hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-label-sm text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Processing Queue</span>
+            <span className="material-symbols-outlined text-primary">bolt</span>
+          </div>
+          <div className="text-headline-lg font-display-lg text-on-surface text-3xl font-bold">{processing}</div>
+          <div className="text-on-surface-variant font-label-sm text-[11px] font-bold">Pending parser: {pending}</div>
+        </div>
+
+        <div className="glass-surface p-lg rounded-xl flex flex-col gap-sm group hover:border-primary/50 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-label-sm text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">System Status</span>
+            <div className={`w-2 h-2 rounded-full pulse-dot ${failed > 0 ? 'bg-error' : 'bg-secondary'}`}></div>
+          </div>
+          <div className="text-headline-lg font-display-lg text-on-surface text-3xl font-bold">
+            {failed > 0 ? 'Degraded' : 'Active'}
+          </div>
+          <div className="text-secondary font-label-sm text-[11px] font-bold">
+            {failed > 0 ? `${failed} indexing faults` : 'All clusters operational'}
+          </div>
+        </div>
+      </section>
+
+      {/* Main Bento Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-lg items-stretch">
+        {/* Coverage Gauge card */}
+        <section className="xl:col-span-4 glass-surface p-xl rounded-xl flex flex-col items-center justify-center gap-lg">
+          <h3 className="font-label-sm text-on-surface-variant uppercase tracking-widest text-[11px] font-bold self-start">Knowledge Coverage</h3>
+          <div className="relative w-60 h-60 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle className="text-surface-container-high" cx="50" cy="50" fill="none" r="40" stroke="currentColor" strokeWidth="8"></circle>
+              <circle
+                className="text-primary gauge-path"
+                cx="50"
+                cy="50"
+                fill="none"
+                r="40"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="8"
+                style={{ strokeDashoffset: strokeDashoffset }}
+              ></circle>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+              <span className="font-display-xl text-display-lg text-on-surface text-3xl font-bold">{healthRatio}%</span>
+              <span className="font-label-sm text-on-surface-variant text-[10px] font-bold mt-1">OPTIMIZED</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-md w-full pt-md">
+            <div className="text-center p-md bg-surface-container-low rounded-lg">
+              <div className="text-on-surface font-semibold text-sm">{total}</div>
+              <div className="text-label-sm text-on-surface-variant text-[10px] font-bold">Sources</div>
+            </div>
+            <div className="text-center p-md bg-surface-container-low rounded-lg">
+              <div className="text-on-surface font-semibold text-sm">{indexed}</div>
+              <div className="text-label-sm text-on-surface-variant text-[10px] font-bold">Indexed</div>
+            </div>
+          </div>
+        </section>
+
+        {/* Recent Document Logs table */}
+        <section className="xl:col-span-8 glass-surface rounded-xl overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="p-lg border-b border-outline-variant flex items-center justify-between">
+              <h3 className="font-label-sm text-on-surface-variant uppercase tracking-widest text-[11px] font-bold">Recent Documents</h3>
+              <button onClick={() => navigate('/library')} className="text-primary font-label-sm hover:underline text-xs cursor-pointer font-bold">
+                View All
+              </button>
+            </div>
+            {isRecentLoading ? (
+              <div className="p-lg space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="skeleton h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : recentData && recentData.documents.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-label-sm text-on-surface-variant border-b border-outline-variant/30 text-[10px] font-bold">
+                      <th className="p-lg font-medium">FILENAME</th>
+                      <th className="p-lg font-medium">FORMAT</th>
+                      <th className="p-lg font-medium">SIZE</th>
+                      <th className="p-lg font-medium">STATUS</th>
+                      <th className="p-lg font-medium text-right">INGESTED</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10 text-xs">
+                    {recentData.documents.map((doc) => (
+                      <tr key={doc.id} className="hover:bg-white/5 transition-colors group">
+                        <td className="p-lg">
+                          <div className="flex items-center gap-md min-w-0 max-w-xs sm:max-w-md">
+                            <div className="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-primary flex-shrink-0">
+                              <span className="material-symbols-outlined text-[18px]">
+                                {doc.fileType === 'PDF' ? 'picture_as_pdf' : doc.fileType === 'IMAGE' ? 'image' : 'description'}
+                              </span>
+                            </div>
+                            <span className="text-on-surface font-medium truncate block">{doc.title}</span>
+                          </div>
+                        </td>
+                        <td className="p-lg text-on-surface-variant font-code text-[11px] font-bold">{doc.fileType}</td>
+                        <td className="p-lg text-on-surface-variant font-mono text-[11px]">{formatBytes(doc.fileSizeBytes)}</td>
+                        <td className="p-lg">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase ${
+                            doc.status === 'INDEXED' ? 'bg-secondary-container/20 text-secondary' :
+                            doc.status === 'PROCESSING' ? 'bg-primary-container/20 text-primary animate-pulse' :
+                            doc.status === 'PENDING' ? 'bg-amber-400/10 text-amber-400' : 'bg-error/10 text-error'
+                          }`}>
+                            {doc.status}
+                          </span>
+                        </td>
+                        <td className="p-lg text-right text-on-surface-variant font-mono text-[11px]">{formatTime(doc.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center text-on-surface-variant text-sm">
+                No indexed files in your directory yet. Try syncing.
+              </div>
             )}
           </div>
 
-          <button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending || syncStatus?.isRunning}
-            className="flex items-center justify-center gap-2 rounded-xl bg-text-primary hover:bg-text-secondary text-background font-bold text-xs px-5 py-3.5 transition-all duration-200 self-start md:self-auto hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            <RefreshCw
-              size={14}
-              className={syncMutation.isPending || syncStatus?.isRunning ? 'animate-spin' : ''}
-            />
-            {syncMutation.isPending || syncStatus?.isRunning ? 'Syncing Drive...' : 'Synchronize Now'}
-          </button>
-        </div>
+          <div className="p-lg border-t border-outline-variant/30 flex items-center justify-between text-xs text-on-surface-variant bg-surface-container-lowest/30">
+            <span>Automatic Sync Listener: <span className="text-secondary font-bold">Listening</span></span>
+            <span className="font-mono text-[11px]">{syncStatus?.lastSyncAt ? `Last run: ${formatTime(syncStatus.lastSyncAt)}` : ''}</span>
+          </div>
+        </section>
       </div>
 
-      {/* Main Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Bento 1: Knowledge Health Gauge */}
-        <div className="rounded-2xl border border-surface-border bg-surface p-6 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[11px] font-bold text-text-secondary tracking-wider uppercase">
-                Indexing Quality
+      {/* Syncing Widget popup (Fixed Corner) — visible only when sync process is running */}
+      {isSyncing && (
+        <div className="fixed bottom-margin-desktop right-margin-desktop w-64 glass-surface rounded-xl p-md border border-primary/20 shadow-xl z-30 flex flex-col gap-sm animate-fade-in bg-surface-container-lowest">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-sm">
+              <span className="material-symbols-outlined text-primary text-[20px] animate-spin" style={{ animationDuration: '3s' }}>
+                sync
               </span>
-              <TrendingUp size={14} className="text-accent-teal" />
+              <span className="font-label-sm font-bold text-on-surface text-xs">Drive Ingest Sync</span>
             </div>
-
-            {/* Premium Semi-Circular Gauge */}
-            <div className="flex flex-col items-center justify-center py-4 relative">
-              <svg className="w-40 h-24 overflow-visible" viewBox="0 0 120 70">
-                {/* Background track */}
-                <path
-                  d="M 10,60 A 50,50 0 0,1 110,60"
-                  fill="none"
-                  stroke="#1d1d22"
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                />
-                {/* Active progress */}
-                <path
-                  d="M 10,60 A 50,50 0 0,1 110,60"
-                  fill="none"
-                  stroke="url(#health-gradient)"
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  className="transition-all duration-1000 ease-out"
-                />
-                <defs>
-                  <linearGradient id="health-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#0ea5e9" />
-                  </linearGradient>
-                </defs>
-              </svg>
-
-              {/* Centered statistics read-out */}
-              <div className="absolute bottom-2 text-center">
-                <span className="text-2xl font-extrabold text-text-primary tracking-tight">
-                  {health}%
-                </span>
-                <p className="text-[9px] text-text-muted font-bold tracking-wider uppercase">
-                  Data Indexed
-                </p>
-              </div>
-            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary pulse-dot"></span>
           </div>
-
-          {/* Breakdown parameters */}
-          <div className="border-t border-surface-border pt-4 mt-4 space-y-2">
-            <HealthIndicator label="Indexed Blocks" count={indexed} color="bg-success" />
-            <HealthIndicator label="Extracting Context" count={processing} color="bg-accent-teal" />
-            <HealthIndicator label="Pending Files" count={pending} color="bg-warning" />
-            <HealthIndicator label="Failed Indexings" count={failed} color="bg-error" />
+          <div className="text-body-md text-on-surface-variant text-xs">Syncing Drive documents into vector index...</div>
+          <div className="flex items-end justify-between text-[10px] font-mono">
+            <div className="text-primary">{indexed} / {total} docs</div>
+            <div className="text-on-surface-variant">{healthRatio}%</div>
+          </div>
+          <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
+            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${healthRatio}%` }}></div>
           </div>
         </div>
-
-        {/* Bento 2: Data Pipeline Flow widget */}
-        <div className="rounded-2xl border border-surface-border bg-surface p-6 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-[11px] font-bold text-text-secondary tracking-wider uppercase">
-                Ingestion Pipeline
-              </span>
-              <FolderSync size={14} className="text-accent-purple" />
-            </div>
-
-            {/* Stepper showing the flow of indexing */}
-            <div className="space-y-4">
-              <PipelineStep
-                number={1}
-                title="Google Drive Listener"
-                description="Scans directory folders"
-                status={syncStatus?.isRunning ? 'active' : 'completed'}
-              />
-              <PipelineStep
-                number={2}
-                title="Document Parser Engine"
-                description="Extracts raw text data"
-                status={processing > 0 ? 'active' : pending > 0 || indexed > 0 ? 'completed' : 'idle'}
-              />
-              <PipelineStep
-                number={3}
-                title="Semantic Embedder"
-                description="Generates vector floats"
-                status={processing > 0 ? 'active' : indexed > 0 ? 'completed' : 'idle'}
-              />
-              <PipelineStep
-                number={4}
-                title="Qdrant Vector Database"
-                description="Populates node indexes"
-                status={indexed > 0 ? 'completed' : 'idle'}
-              />
-            </div>
-          </div>
-
-          <div className="border-t border-surface-border pt-4 mt-4 flex items-center justify-between text-[10px] text-text-muted">
-            <span>Last Sync Activity:</span>
-            <span className="font-semibold text-text-secondary">
-              {syncStatus?.lastSyncAt ? formatRelativeTime(syncStatus.lastSyncAt) : 'None Recorded'}
-            </span>
-          </div>
-        </div>
-
-        {/* Bento 3: AI Categorized Insights */}
-        <div className="rounded-2xl border border-surface-border bg-surface p-6 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-[11px] font-bold text-text-secondary tracking-wider uppercase">
-                AI Knowledge Insights
-              </span>
-              <Brain size={14} className="text-accent-purple" />
-            </div>
-
-            <div className="space-y-3">
-              <InsightBlock type="discovery" label="142 Concepts Mapped">
-                Identified technology nodes and relation links.
-              </InsightBlock>
-              <InsightBlock type="warning" label="Duplicate Documents">
-                Detected 37 file overlaps in Drive folder.
-              </InsightBlock>
-              <InsightBlock type="info" label="12 Outdated Notes">
-                Found files matching newer uploaded details.
-              </InsightBlock>
-              <InsightBlock type="success" label="Vector Sync Success">
-                Qdrant graph and semantic tags successfully populated.
-              </InsightBlock>
-            </div>
-          </div>
-
-          <div className="border-t border-surface-border pt-3 mt-4 text-center">
-            <span className="text-[10px] text-text-muted">
-              AI Ingestion Agent is currently <span className="text-success font-bold">Idle</span>
-            </span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Activity Timeline & Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* Col 1-2: Activity Timeline */}
-        <div className="md:col-span-2 rounded-2xl border border-surface-border bg-surface p-6 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-text-primary tracking-wide uppercase">
-              Recent Sync Activity Logs
-            </h3>
-            <p className="text-[11px] text-text-muted mt-1">
-              Real-time records of indexing runs and operations.
-            </p>
-          </div>
-
-          <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-border">
-            <ActivityRow
-              title="Drive sync run finished"
-              details="All remote repository file additions scanned successfully"
-              time="2 minutes ago"
-              status="success"
-            />
-            <ActivityRow
-              title="Ingested 48 PDFs"
-              details="Vector chunks extracted and mapped onto Graph nodes"
-              time="12 minutes ago"
-              status="success"
-            />
-            <ActivityRow
-              title="Extracted concept weights"
-              details="Identified 'React Routing' as a primary structural connector"
-              time="34 minutes ago"
-              status="running"
-            />
-            <ActivityRow
-              title="Failed to index notes_draft.docx"
-              details="Extraction timed out — scheduler will retry on next sync run"
-              time="1 hour ago"
-              status="failed"
-            />
-          </div>
-        </div>
-
-        {/* Col 3: Quick Action Tiles */}
-        <div className="rounded-2xl border border-surface-border bg-surface p-6 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <div>
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-text-primary tracking-wide uppercase">
-                Platform Navigation
-              </h3>
-              <p className="text-[11px] text-text-muted mt-1">
-                Instantly trigger actions across platform features.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <ActionCard icon={<Upload size={16} />} label="Add Files" subText="Import Local docs" />
-              <ActionCard icon={<Search size={16} />} label="Query Search" subText="Semantic query" />
-              <ActionCard icon={<Network size={16} />} label="View Graph" subText="Concept relations" />
-              <ActionCard icon={<Database size={16} />} label="Qdrant Index" subText="Vector space" />
-            </div>
-          </div>
-
-          <div className="border-t border-surface-border pt-4 mt-6 flex items-center justify-between text-[11px] text-text-secondary">
-            <span>Database Storage:</span>
-            <span className="font-mono text-text-primary font-bold">2.4 GB</span>
-          </div>
-        </div>
-
-      </div>
+      )}
     </div>
-  );
-}
-
-/* SUB-COMPONENTS */
-
-function HealthIndicator({
-  label,
-  count,
-  color,
-}: {
-  label: string;
-  count: number;
-  color: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1 text-xs">
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${color}`} />
-        <span className="text-text-secondary">{label}</span>
-      </div>
-      <span className="font-mono font-bold text-text-primary">{count}</span>
-    </div>
-  );
-}
-
-function PipelineStep({
-  number,
-  title,
-  description,
-  status,
-}: {
-  number: number;
-  title: string;
-  description: string;
-  status: 'idle' | 'active' | 'completed';
-}) {
-  const statusColor = {
-    idle: 'border-surface-border text-text-muted bg-transparent',
-    active: 'border-accent-purple text-accent-purple bg-accent-purple/5 animate-pulse',
-    completed: 'border-accent-teal text-accent-teal bg-accent-teal/5',
-  }[status];
-
-  return (
-    <div className="flex items-start gap-3.5">
-      <div className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold font-mono flex-shrink-0 ${statusColor}`}>
-        {number}
-      </div>
-      <div className="leading-tight">
-        <span className={`text-xs font-bold ${status === 'idle' ? 'text-text-muted' : 'text-text-primary'}`}>
-          {title}
-        </span>
-        <p className="text-[10px] text-text-muted mt-0.5">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function InsightBlock({
-  type,
-  label,
-  children,
-}: {
-  type: 'discovery' | 'warning' | 'info' | 'success';
-  label: string;
-  children: string;
-}) {
-  const styles = {
-    discovery: { border: 'border-accent-purple/20 bg-accent-purple/5', text: 'text-accent-purple', bullet: 'bg-accent-purple' },
-    warning: { border: 'border-warning/20 bg-warning/5', text: 'text-warning', bullet: 'bg-warning' },
-    info: { border: 'border-accent-teal/20 bg-accent-teal/5', text: 'text-accent-teal', bullet: 'bg-accent-teal' },
-    success: { border: 'border-success/20 bg-success/5', text: 'text-success', bullet: 'bg-success' },
-  }[type];
-
-  return (
-    <div className={`p-3 rounded-xl border ${styles.border}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`w-1.5 h-1.5 rounded-full ${styles.bullet}`} />
-        <span className={`text-[11px] font-bold ${styles.text}`}>{label}</span>
-      </div>
-      <p className="text-[10px] text-text-secondary leading-relaxed">{children}</p>
-    </div>
-  );
-}
-
-function ActivityRow({
-  title,
-  details,
-  time,
-  status,
-}: {
-  title: string;
-  details: string;
-  time: string;
-  status: 'success' | 'running' | 'failed';
-}) {
-  const dotColor = {
-    success: 'bg-success border-success/20',
-    running: 'bg-accent-purple border-accent-purple/20 animate-ping',
-    failed: 'bg-error border-error/20',
-  }[status];
-
-  return (
-    <div className="flex items-start gap-4 relative z-10 pl-1">
-      <div className={`w-3 h-3 rounded-full border-2 bg-background flex-shrink-0 mt-1 flex items-center justify-center`}>
-        <span className={`w-1 h-1 rounded-full ${dotColor}`} />
-      </div>
-      <div className="flex-1 leading-tight">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-text-primary">{title}</span>
-          <span className="text-[9px] font-mono text-text-muted">{time}</span>
-        </div>
-        <p className="text-[10px] text-text-secondary mt-1">{details}</p>
-      </div>
-    </div>
-  );
-}
-
-function ActionCard({
-  icon,
-  label,
-  subText,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  subText: string;
-}) {
-  return (
-    <button className="p-3.5 rounded-xl border border-surface-border bg-surface-elevated/40 hover:bg-surface-hover hover:border-text-muted text-left transition-all duration-200 group hover:translate-y-[-1px] cursor-pointer">
-      <div className="text-text-muted group-hover:text-text-primary transition-colors duration-200 mb-2">
-        {icon}
-      </div>
-      <span className="text-[11px] font-bold text-text-primary block leading-none mb-1">
-        {label}
-      </span>
-      <span className="text-[9px] text-text-muted leading-none block">
-        {subText}
-      </span>
-    </button>
   );
 }
 
@@ -488,15 +291,14 @@ function ActionCard({
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 17) return 'Good Afternoon';
-  return 'Good Evening';
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
-function formatRelativeTime(dateStr: string): string {
+function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
-
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
@@ -506,6 +308,11 @@ function formatRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
 
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

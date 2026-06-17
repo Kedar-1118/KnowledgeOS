@@ -1,24 +1,13 @@
 // apps/frontend/src/pages/SearchPage.tsx
 /**
- * Redesigned Semantic Search Page.
- * Spotlight-style search bar combined with a side-by-side Live Preview Panel.
- * Left Pane displays search results; Right Pane displays selected chunk preview in detail.
+ * SearchPage — Premium Semantic Search Interface.
+ * Features a spotlight-style query bar, search histories stored in localStorage,
+ * and a side-by-side details preview showing text snippets with highlight matching.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Search as SearchIcon,
-  FileText,
-  Filter,
-  X,
-  Clock,
-  ChevronRight,
-  Sparkles,
-  ExternalLink,
-  Info,
-} from 'lucide-react';
-
 import { api } from '../lib/api';
 
 interface SearchResult {
@@ -46,7 +35,7 @@ interface SearchResponse {
 }
 
 const RECENT_SEARCHES_KEY = 'knowledgeos-recent-searches';
-const MAX_RECENT = 8;
+const MAX_RECENT_LOGS = 6;
 
 function getRecentSearches(): string[] {
   try {
@@ -56,58 +45,71 @@ function getRecentSearches(): string[] {
   }
 }
 
-function addRecentSearch(query: string): void {
-  const recent = getRecentSearches().filter(s => s !== query);
+function addRecentSearch(queryStr: string): void {
+  const query = queryStr.trim();
+  if (!query) return;
+  const recent = getRecentSearches().filter((s) => s !== query);
   recent.unshift(query);
-  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT_LOGS)));
 }
 
 export function SearchPage() {
-  const [query, setQuery] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [showRecent, setShowRecent] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlQuery = searchParams.get('q') || '';
+
+  const [query, setQuery] = useState(urlQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(urlQuery);
+  const [focused, setFocused] = useState(false);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ⌘K / Ctrl+K keyboard shortcut
+  // ─── Sync with URL query parameter changes ───
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    if (urlQuery) {
+      setQuery(urlQuery);
+      setSubmittedQuery(urlQuery);
+    }
+  }, [urlQuery]);
+
+  // ─── Cmd+K Focus Listener ───
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         inputRef.current?.focus();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
   }, []);
 
-  // Search query fetching
-  const { data, isLoading, isFetching } = useQuery<SearchResponse>({
+  // ─── Query: Fetch Semantic Matches ───
+  const { data, isLoading } = useQuery<SearchResponse>({
     queryKey: ['search', submittedQuery],
     queryFn: async () => {
       const res = await api.post<{ success: boolean; data: SearchResponse }>('/api/search', {
         query: submittedQuery,
-        topK: 15,
+        topK: 12,
       });
       return res.data.data;
     },
     enabled: !!submittedQuery,
   });
 
-  const handleSubmit = useCallback((searchQuery: string) => {
-    const trimmed = searchQuery.trim();
+  const handleSearchSubmit = useCallback((qStr: string) => {
+    const trimmed = qStr.trim();
     if (trimmed) {
       setSubmittedQuery(trimmed);
+      setSearchParams({ q: trimmed });
       addRecentSearch(trimmed);
-      setShowRecent(false);
-      setSelectedResult(null); // Reset selection
+      setFocused(false);
+      setSelectedResult(null);
     }
-  }, []);
+  }, [setSearchParams]);
 
-  // Set default selection when data arrives
+  // Sync selected node with first result on load
   useEffect(() => {
-    if (data && data.results.length > 0) {
+    if (data?.results && data.results.length > 0) {
       setSelectedResult(data.results[0] || null);
     } else {
       setSelectedResult(null);
@@ -116,333 +118,210 @@ export function SearchPage() {
 
   const recentSearches = getRecentSearches();
 
+  // Highlight matches function
+  const renderHighlightedText = (text: string, q: string) => {
+    if (!q.trim()) return <span>{text}</span>;
+    const words = q.split(/\s+/).filter(Boolean);
+    const regex = new RegExp(`(${words.join('|')})`, 'gi');
+    const parts = text.split(regex);
+    return (
+      <>
+        {parts.map((part, idx) =>
+          regex.test(part) ? (
+            <span key={idx} className="highlight-match">
+              {part}
+            </span>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
+
   return (
-    <div className="animate-fade-in max-w-7xl mx-auto space-y-6 select-none">
-      
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-extrabold text-text-primary font-sans uppercase tracking-wider">
-          Semantic Finder
-        </h1>
-        <p className="text-xs text-text-secondary mt-1">
-          Perform concept-based neural searches across Google Drive files.
-        </p>
-      </div>
-
-      {/* Spotlight Command Bar */}
-      <div className="relative">
-        <div
-          className="flex items-center gap-3 px-5 py-4.5 rounded-xl border transition-all duration-200"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderColor: showRecent ? 'var(--color-accent-teal)' : 'var(--color-surface-border)',
-            boxShadow: showRecent ? '0 0 20px rgba(14,165,233,0.1)' : 'none',
-          }}
-        >
-          <SearchIcon size={18} className="text-text-muted flex-shrink-0" />
-          <input
-            ref={inputRef}
-            id="search-input"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setShowRecent(true)}
-            onBlur={() => setTimeout(() => setShowRecent(false), 200)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSubmit(query);
-              if (e.key === 'Escape') {
-                setShowRecent(false);
-                inputRef.current?.blur();
-              }
-            }}
-            placeholder="Search matching concepts or ask a question (e.g. 'explain neural backpropagation')..."
-            className="flex-1 bg-transparent border-none outline-none text-sm font-sans"
-            style={{ color: 'var(--color-text-primary)' }}
-            autoFocus
-          />
-          {query && (
-            <button
-              onClick={() => { setQuery(''); setSubmittedQuery(''); setSelectedResult(null); }}
-              className="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-            >
-              <X size={15} />
-            </button>
-          )}
-          <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-background-elevated border border-surface-border text-text-muted font-mono">
-            ⌘K
-          </kbd>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="p-2 rounded-lg transition-colors cursor-pointer"
-            style={{
-              color: showFilters ? 'var(--color-accent-teal)' : 'var(--color-text-muted)',
-              backgroundColor: showFilters ? 'rgba(14,165,233,0.08)' : 'transparent',
-            }}
-          >
-            <Filter size={16} />
-          </button>
+    <div className="animate-fade-in flex flex-col items-center select-none flex-1 min-h-[calc(100vh-100px)]">
+      {/* Hero / Search Section */}
+      <section className="w-full max-w-4xl relative z-20">
+        <div className="text-center mb-xl">
+          <h1 className="font-display-lg text-display-lg text-on-surface mb-xs text-3xl font-semibold">Search Intelligence</h1>
+          <p className="font-body-md text-on-surface-variant text-sm">Analyze across vectors, documents, and neural graphs.</p>
         </div>
-
-        {/* Recent queries suggestion dropdown */}
-        {showRecent && !submittedQuery && recentSearches.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2.5 rounded-xl border border-surface-border bg-surface shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
-            <div className="px-4 py-2 border-b border-surface-border">
-              <span className="text-[10px] font-bold text-text-muted tracking-wider uppercase">
-                Recent Search Inquiries
-              </span>
-            </div>
-            <div className="max-h-60 overflow-y-auto">
-              {recentSearches.map((recent, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setQuery(recent); handleSubmit(recent); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary cursor-pointer"
-                >
-                  <Clock size={12} className="text-text-muted" />
-                  <span className="flex-1 font-medium">{recent}</span>
-                  <ChevronRight size={12} className="text-text-muted" />
-                </button>
-              ))}
+        <div className="relative w-full group">
+          <div className="search-glow flex items-center bg-surface-container-high border border-outline-variant rounded-xl p-4 transition-all duration-300">
+            <span className="material-symbols-outlined text-primary mr-md">search</span>
+            <input
+              ref={inputRef}
+              className="bg-transparent border-none outline-none w-full text-on-surface font-body-lg text-sm placeholder:text-on-surface-variant/50 focus:ring-0 focus:border-none"
+              placeholder="Search knowledge base..."
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setTimeout(() => setFocused(false), 200)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchSubmit(query);
+                if (e.key === 'Escape') {
+                  setFocused(false);
+                  inputRef.current?.blur();
+                }
+              }}
+            />
+            <div className="flex gap-xs items-center ml-auto">
+              <kbd className="font-code text-[11px] bg-surface-container-lowest px-2 py-0.5 rounded border border-outline-variant text-on-surface-variant font-mono">⌘</kbd>
+              <kbd className="font-code text-[11px] bg-surface-container-lowest px-2 py-0.5 rounded border border-outline-variant text-on-surface-variant font-mono">K</kbd>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Main Split Layout Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* Left Pane (Results List) */}
-        <div className="lg:col-span-7 flex flex-col min-h-[500px]">
-          {isLoading || isFetching ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="rounded-xl border border-surface-border bg-surface p-5 space-y-3">
-                  <div className="skeleton h-5 w-2/3" />
-                  <div className="skeleton h-3 w-full" />
-                  <div className="skeleton h-3 w-5/6" />
-                  <div className="flex gap-2">
-                    <div className="skeleton h-4.5 w-16" />
-                    <div className="skeleton h-4.5 w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : data && data.results.length > 0 ? (
-            <div className="space-y-3">
-              {/* Statistics row */}
-              <div className="flex items-center justify-between text-xs text-text-secondary px-1">
-                <span>{data.totalCount} result matches for &ldquo;{submittedQuery}&rdquo;</span>
-                <span className="font-mono text-text-muted">{data.queryTimeMs.toFixed(0)}ms</span>
+          {/* Spotlight Dropdown (Visible on focus) */}
+          {focused && recentSearches.length > 0 && (
+            <div className="absolute top-[calc(100%+8px)] left-0 w-full glass-effect rounded-xl overflow-hidden shadow-2xl transition-all duration-300 z-30 opacity-100 translate-y-0">
+              <div className="p-sm border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-high/40">
+                <span className="font-label-sm text-on-surface-variant px-md text-[10px] font-bold uppercase tracking-wider">Recent Searches</span>
+                <button
+                  className="font-label-sm text-primary hover:text-primary-fixed-dim px-md text-[10px] font-bold cursor-pointer"
+                  onClick={() => {
+                    localStorage.removeItem(RECENT_SEARCHES_KEY);
+                    setFocused(false);
+                  }}
+                >
+                  Clear All
+                </button>
               </div>
-
-              {/* Cards List */}
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                {data.results.map((result, idx) => (
-                  <ResultRowCard
-                    key={`${result.documentId}-${idx}`}
-                    result={result}
-                    query={submittedQuery}
-                    isSelected={selectedResult?.documentId === result.documentId && selectedResult?.chunkContent === result.chunkContent}
-                    onSelect={() => setSelectedResult(result)}
-                  />
+              <div className="py-1 bg-surface-dim">
+                {recentSearches.map((historyQuery, index) => (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setQuery(historyQuery);
+                      handleSearchSubmit(historyQuery);
+                    }}
+                    className="flex items-center gap-md px-lg py-2.5 hover:bg-white/5 cursor-pointer transition-colors group"
+                  >
+                    <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors text-[18px]">history</span>
+                    <span className="flex-1 font-body-md text-xs text-on-surface">{historyQuery}</span>
+                  </div>
                 ))}
               </div>
             </div>
-          ) : submittedQuery ? (
-            /* Empty state results */
-            <div className="rounded-2xl border border-surface-border bg-surface p-12 text-center flex-1 flex flex-col justify-center items-center">
-              <SearchIcon size={32} className="text-text-muted mb-4" />
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">No Matches Located</h3>
-              <p className="text-xs text-text-secondary mt-2 max-w-sm leading-relaxed">
-                Could not retrieve semantic clusters. Rephrase details or confirm Drive index status.
-              </p>
-            </div>
-          ) : (
-            /* Idle landing prompt */
-            <div className="rounded-2xl border border-surface-border bg-surface p-12 text-center flex-1 flex flex-col justify-center items-center">
-              <Sparkles size={32} className="text-accent-purple mb-4 animate-pulse" />
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Awaiting Inquiry</h3>
-              <p className="text-xs text-text-secondary mt-2 max-w-xs leading-relaxed">
-                Enter queries above to scan indexed documents. We parse concepts and locate matching paragraphs instantly.
-              </p>
-            </div>
           )}
         </div>
+      </section>
 
-        {/* Right Pane (Live Preview Panel) */}
-        <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-surface-border bg-surface p-6 h-full flex flex-col justify-between shadow-[0_4px_25px_rgba(0,0,0,0.3)] sticky top-6">
-            {selectedResult ? (
-              <div className="flex flex-col justify-between h-full space-y-6">
-                
-                {/* Meta details */}
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <FileText size={16} className="text-text-secondary flex-shrink-0" />
-                      <h3 className="text-xs font-bold text-text-primary leading-snug line-clamp-2">
-                        {selectedResult.documentTitle}
+      {/* Search Results / Split View */}
+      {submittedQuery && (
+        <section className="flex-grow w-full max-w-6xl mt-xl grid grid-cols-12 gap-lg overflow-hidden items-stretch">
+          {/* Results List */}
+          <div className="col-span-12 lg:col-span-7 flex flex-col gap-md pr-1 overflow-y-auto max-h-[550px]">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="skeleton h-24 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : data && data.results.length > 0 ? (
+              data.results.map((res, index) => (
+                <div
+                  key={index}
+                  onClick={() => setSelectedResult(res)}
+                  className={`bg-surface-container-low border rounded-xl p-lg transition-colors cursor-pointer group flex flex-col justify-between ${
+                    selectedResult?.documentId === res.documentId && selectedResult?.chunkContent === res.chunkContent
+                      ? 'border-primary shadow-md bg-surface-container-high/40'
+                      : 'border-outline-variant hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-sm gap-2">
+                    <div className="flex items-center gap-sm min-w-0">
+                      <span className="material-symbols-outlined text-primary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {res.fileType === 'PDF' ? 'picture_as_pdf' : 'description'}
+                      </span>
+                      <h3 className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
+                        {res.documentTitle}
                       </h3>
                     </div>
-
-                    <span className={`badge ${selectedResult.fileType === 'PDF' ? 'badge-failed' : 'badge-processing'} flex-shrink-0`}>
-                      {selectedResult.fileType}
-                    </span>
-                  </div>
-
-                  {/* Similarity metric gauge */}
-                  <div className="p-3 bg-background-elevated rounded-xl border border-surface-border flex items-center justify-between text-xs">
-                    <span className="text-text-secondary flex items-center gap-1">
-                      <Info size={12} className="text-text-muted" /> Matches Relevance
-                    </span>
-                    <span className="font-mono font-bold text-accent-teal">
-                      {(selectedResult.score * 100).toFixed(0)}% Score
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content reading block */}
-                <div className="flex-1 overflow-y-auto bg-background-elevated p-4 rounded-xl border border-surface-border max-h-[300px]">
-                  <p className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap font-sans">
-                    {highlightText(selectedResult.chunkContent, submittedQuery)}
-                  </p>
-                </div>
-
-                {/* Bottom detail descriptors */}
-                <div className="space-y-4 pt-4 border-t border-surface-border">
-                  <div className="flex items-center justify-between text-[11px] text-text-secondary">
-                    <span>Target Page:</span>
-                    <span className="font-bold text-text-primary">
-                      {selectedResult.pageNumber ? `Page ${selectedResult.pageNumber}` : 'N/A'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-text-secondary">
-                    <span>Heading Path:</span>
-                    <span className="font-bold text-text-primary truncate max-w-[200px]">
-                      {selectedResult.headingContext || 'Top Level'}
-                    </span>
-                  </div>
-
-                  {/* Tags */}
-                  {selectedResult.tags.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
-                        Assigned Clusters
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedResult.tags.map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[10px] px-2 py-0.5 rounded border"
-                            style={{
-                              backgroundColor: `${tag.color || '#6366f1'}08`,
-                              borderColor: `${tag.color || '#6366f1'}20`,
-                              color: tag.color || '#6366f1',
-                            }}
-                          >
-                            {tag.label}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="bg-secondary-container/20 border border-secondary-fixed-dim/30 text-secondary px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0">
+                      {Math.round(res.score * 100)}% Match
                     </div>
-                  )}
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2 mb-md font-sans">
+                    {renderHighlightedText(res.chunkContent, submittedQuery)}
+                  </p>
+                  <div className="flex items-center gap-md text-[10px] text-on-surface-variant border-t border-outline-variant/20 pt-2 font-mono">
+                    <div className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">folder</span>
+                      <span>{res.fileType} Ingestion</span>
+                    </div>
+                    {res.pageNumber && (
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">find_in_page</span>
+                        <span>Page {res.pageNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center p-12 glass-panel rounded-xl text-on-surface-variant">
+                <span className="material-symbols-outlined text-4xl opacity-30 block mb-2">sentiment_dissatisfied</span>
+                <span className="text-xs">No vector matches found for "{submittedQuery}". Try refining the query keywords.</span>
+              </div>
+            )}
+          </div>
 
-                  {/* Actions CTA */}
-                  {selectedResult.driveFileUrl && (
-                    <button
-                      onClick={() => window.open(selectedResult.driveFileUrl!, '_blank')}
-                      className="btn-google w-full justify-center py-2.5 rounded-lg border border-surface-border hover:bg-surface-hover cursor-pointer"
-                    >
-                      <span className="text-[11px] font-bold">Open File in Google Drive</span>
-                      <ExternalLink size={12} className="text-text-muted" />
-                    </button>
-                  )}
+          {/* Detail Panel (Right Side) */}
+          <div className="col-span-12 lg:col-span-5 flex flex-col bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden min-h-[300px]">
+            {selectedResult ? (
+              <div className="p-xl flex-1 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-label-sm text-label-sm px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold">
+                      Concept Excerpt
+                    </span>
+                    {selectedResult.driveFileUrl && (
+                      <button 
+                        onClick={() => window.open(selectedResult.driveFileUrl!, '_blank')}
+                        className="material-symbols-outlined text-on-surface-variant hover:text-on-surface text-[18px] cursor-pointer"
+                        title="Open document"
+                      >
+                        open_in_new
+                      </button>
+                    )}
+                  </div>
+                  <h2 className="font-display-lg text-lg text-on-surface font-semibold leading-tight">
+                    {selectedResult.documentTitle}
+                  </h2>
+                  <div className="flex flex-wrap gap-xs">
+                    <span className="text-[10px] bg-white/5 border border-outline-variant px-2 py-0.5 rounded font-mono text-on-surface-variant">
+                      Type: {selectedResult.fileType}
+                    </span>
+                    {selectedResult.pageNumber && (
+                      <span className="text-[10px] bg-white/5 border border-outline-variant px-2 py-0.5 rounded font-mono text-on-surface-variant">
+                        Page: {selectedResult.pageNumber}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                <div className="flex-1 min-h-[150px] bg-surface-dim border border-outline-variant/50 p-4 rounded-xl overflow-y-auto font-sans leading-relaxed text-xs text-on-surface">
+                  {renderHighlightedText(selectedResult.chunkContent, submittedQuery)}
+                </div>
+
+                <div className="pt-4 border-t border-outline-variant/30 text-[10px] text-on-surface-variant font-mono">
+                  <span>Cosine Similarity: {(selectedResult.score).toFixed(4)}</span>
+                </div>
               </div>
             ) : (
-              /* Awaiting Selection placeholder */
-              <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
-                <FileText size={28} className="text-text-muted mb-3" />
-                <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Preview Terminal</h4>
-                <p className="text-[11px] text-text-secondary mt-1.5 max-w-[200px] leading-relaxed">
-                  Select a matching segment on the left to read context parameters.
+              <div className="flex-grow flex flex-col items-center justify-center p-6 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-4xl mb-3 opacity-30">info</span>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">Concept Analysis</h4>
+                <p className="text-[11px] mt-1.5 leading-relaxed max-w-[180px]">
+                  Select any matching block item on the list view to analyze its context snippets.
                 </p>
               </div>
             )}
           </div>
-        </div>
-
-      </div>
+        </section>
+      )}
     </div>
-  );
-}
-
-/* HELPER ROW CARD FOR SEARCH RESULTS */
-
-function ResultRowCard({
-  result,
-  query,
-  isSelected,
-  onSelect,
-}: {
-  result: SearchResult;
-  query: string;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <div
-      onClick={onSelect}
-      className={`rounded-xl p-4.5 border transition-all duration-200 cursor-pointer ${
-        isSelected
-          ? 'bg-surface-hover border-accent-teal shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
-          : 'bg-surface border-surface-border hover:border-text-muted'
-      }`}
-    >
-      <div className="flex items-start gap-3 justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <FileText size={14} className="text-text-muted flex-shrink-0" />
-          <span className="text-xs font-bold text-text-primary truncate">
-            {result.documentTitle}
-          </span>
-        </div>
-
-        <span className="text-[10px] font-mono font-bold text-accent-teal bg-accent-teal/5 border border-accent-teal/15 px-1.5 py-0.25 rounded">
-          {(result.score * 100).toFixed(0)}%
-        </span>
-      </div>
-
-      <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-3">
-        {highlightText(result.chunkContent, query)}
-      </p>
-
-      <div className="flex items-center justify-between text-[10px] text-text-muted">
-        <span>{result.pageNumber ? `Page ${result.pageNumber}` : 'Top Context'}</span>
-        <span className="truncate max-w-[150px] font-semibold">
-          {result.headingContext || 'Root Context'}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* TEXT HIGHLIGHT HELPER */
-
-function highlightText(text: string, q: string) {
-  if (!q) return text;
-  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-  return parts.map((part, i) =>
-    part.toLowerCase() === q.toLowerCase() ? (
-      <mark
-        key={i}
-        className="bg-accent-teal/20 text-text-primary px-0.5 rounded"
-      >
-        {part}
-      </mark>
-    ) : (
-      part
-    )
   );
 }

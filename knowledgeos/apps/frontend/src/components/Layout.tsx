@@ -1,23 +1,89 @@
 // apps/frontend/src/components/Layout.tsx
 /**
- * Main layout wrapper — sidebar + main content area.
- * Used by all authenticated routes.
+ * Layout — Premium responsive container wrapping sidebar and main canvas.
+ * Implements the fixed top-right header and side navigation from the design engine.
  */
 
-import { Outlet } from 'react-router-dom';
-
+import { useState } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { useAuthStore } from '../store/authStore';
 
 export function Layout() {
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const [searchVal, setSearchVal] = useState('');
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchVal.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchVal.trim())}`);
+      setSearchVal('');
+    }
+  };
+
   return (
-    <div className="flex min-h-screen dot-grid" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className="min-h-screen bg-background text-on-surface font-body-md overflow-x-hidden">
+      {/* Background ambient light effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] radial-glow opacity-60"></div>
+        <div className="absolute bottom-[20%] right-[-5%] w-[40%] h-[40%] radial-glow opacity-40"></div>
+      </div>
+
+      {/* Navigation Sidebar */}
       <Sidebar />
 
-      {/* Main content area */}
-      <main
-        className="flex-1 min-h-screen min-w-0"
-      >
-        <div className="p-8 max-w-[1400px] mx-auto">
+      {/* TopNavBar */}
+      <header className="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-sm z-40 flex justify-between items-center px-gutter">
+        <div className="flex items-center gap-xl flex-1">
+          <div className="relative w-full max-w-md">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+              search
+            </span>
+            <input
+              className="w-full bg-surface-container-high border border-outline-variant rounded-full py-1.5 pl-10 pr-4 text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-xs"
+              placeholder="Search knowledge base..."
+              type="text"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+          </div>
+          <nav className="hidden md:flex gap-lg">
+            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-opacity cursor-pointer" onClick={() => navigate('/settings')}>Docs</a>
+            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-opacity cursor-pointer" onClick={() => navigate('/settings')}>API</a>
+            <a className="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-opacity cursor-pointer" onClick={() => navigate('/settings')}>Support</a>
+          </nav>
+        </div>
+        <div className="flex items-center gap-md">
+          <button 
+            onClick={() => navigate('/settings')}
+            className="px-md py-xs bg-white/5 border border-outline-variant rounded-lg font-label-sm text-primary hover:bg-white/10 transition-colors cursor-pointer text-xs"
+          >
+            Upgrade
+          </button>
+          <div className="flex items-center gap-sm">
+            <button className="p-2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
+              <span className="material-symbols-outlined text-[20px]">notifications</span>
+            </button>
+            <button className="p-2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" onClick={() => navigate('/status')}>
+              <span className="material-symbols-outlined text-[20px]">help_outline</span>
+            </button>
+          </div>
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant flex-shrink-0">
+            {user?.avatarUrl ? (
+              <img alt="User Avatar" className="w-full h-full object-cover" src={user.avatarUrl} />
+            ) : (
+              <div className="w-full h-full bg-primary/20 flex items-center justify-center text-xs font-mono font-bold text-primary">
+                {user?.name?.charAt(0) ?? '?'}
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Workspace Panel */}
+      <main className="ml-[240px] pt-16 min-h-screen relative z-10 flex flex-col">
+        <div className="p-margin-desktop w-full flex-1 flex flex-col justify-start">
           <Outlet />
         </div>
       </main>

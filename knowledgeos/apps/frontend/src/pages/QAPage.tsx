@@ -1,24 +1,11 @@
 // apps/frontend/src/pages/QAPage.tsx
 /**
- * Redesigned Ask My Knowledge Page.
- * Research assistant workspace split layout:
- * Left Pane displays the message thread; Right Pane displays details of clicked source citations.
+ * QAPage — AI Research Assistant Workspace.
+ * Integrates an SSE streaming chatbot client, citation tags,
+ * and a sidebar to inspect original source excerpts.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Send,
-  Brain,
-  User,
-  FileText,
-  ExternalLink,
-  Trash2,
-  MessageSquare,
-  Loader2,
-  BookOpen,
-  Info,
-} from 'lucide-react';
-
 import { useAuthStore } from '../store/authStore';
 
 interface Source {
@@ -42,7 +29,7 @@ export function QAPage() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -54,7 +41,7 @@ export function QAPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Auto-resize textarea
+  // Textarea height auto-adjust
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -68,7 +55,7 @@ export function QAPage() {
 
     setInput('');
     setIsStreaming(true);
-    setSelectedSource(null); // Reset preview panel
+    setSelectedSource(null);
 
     const userMsg: Message = {
       id: `user-${Date.now()}`,
@@ -85,7 +72,7 @@ export function QAPage() {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg, assistantMsg]);
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
     try {
       const response = await fetch('/api/qa', {
@@ -98,15 +85,14 @@ export function QAPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP Error ${response.status}`);
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      if (!reader) throw new Error('No stream body');
 
-      if (!reader) throw new Error('No response body');
-
-      let accumulatedContent = '';
+      let accumulatedAnswer = '';
       let sources: Source[] = [];
 
       while (true) {
@@ -118,50 +104,44 @@ export function QAPage() {
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
+            const rawData = line.slice(6);
+            if (rawData === '[DONE]') continue;
 
             try {
-              const parsed = JSON.parse(data) as {
+              const parsed = JSON.parse(rawData) as {
                 answer_chunk?: string;
                 error?: string;
                 sources?: Source[];
               };
 
               if (parsed.error) {
-                accumulatedContent += parsed.error;
+                accumulatedAnswer += parsed.error;
               } else if (parsed.answer_chunk) {
-                accumulatedContent += parsed.answer_chunk;
+                accumulatedAnswer += parsed.answer_chunk;
               } else if (parsed.sources) {
                 sources = parsed.sources;
-                // Automatically select first source
                 if (sources.length > 0) {
                   setSelectedSource(sources[0] || null);
                 }
               }
 
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, content: accumulatedContent, sources }
-                    : m
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId ? { ...msg, content: accumulatedAnswer, sources } : msg
                 )
               );
             } catch {
-              // Ignore invalid lines
+              // Ignore parser errors
             }
           }
         }
       }
-    } catch (error) {
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === assistantId
-            ? {
-                ...m,
-                content: `Error: ${error instanceof Error ? error.message : 'Connection failed'}. Please retry.`,
-              }
-            : m
+    } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantId
+            ? { ...msg, content: `Error generating response: ${err.message || 'System fault'}` }
+            : msg
         )
       );
     } finally {
@@ -169,235 +149,239 @@ export function QAPage() {
     }
   }, [input, isStreaming, token]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void handleSend();
-    }
-  };
+  const latestAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
+  const citations = latestAssistantMessage?.sources ?? [];
 
   return (
-    <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)] select-none">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <div>
-          <h1 className="text-xl font-extrabold text-text-primary uppercase tracking-wider">
-            AI Assistant Workspace
-          </h1>
-          <p className="text-xs text-text-secondary mt-1">
-            Query files using natural language. Citations are inspectable in the right side panel.
-          </p>
-        </div>
-        
-        {messages.length > 0 && (
-          <button
-            onClick={() => { setMessages([]); setSelectedSource(null); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border text-xs text-text-secondary hover:text-error hover:bg-error/5 hover:border-error/20 transition-all duration-200 cursor-pointer"
-          >
-            <Trash2 size={13} />
-            <span>Clear Threads</span>
-          </button>
-        )}
-      </div>
-
-      {/* Main Split Layout Workspace */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* Left Pane: Chat Workspace (65% width) */}
-        <div className="lg:col-span-8 flex flex-col h-full min-h-0 bg-surface rounded-2xl border border-surface-border overflow-hidden">
-          
-          {/* Messages Feed Wrapper */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {messages.length === 0 ? (
-              /* Greeting Interface */
-              <div className="h-full flex flex-col justify-center items-center text-center max-w-md mx-auto">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent-purple/10 border border-accent-purple/20 text-accent-purple mb-4 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
-                  <MessageSquare size={20} />
-                </div>
-                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">
-                  Semantic Q&A Engine
-                </h3>
-                <p className="text-xs text-text-secondary mt-2 leading-relaxed">
-                  Enter questions targeting your document collections. The AI assistant extracts relevant files and writes an answer citing resources.
-                </p>
-
-                {/* Suggestions list */}
-                <div className="mt-6 flex flex-col gap-2 w-full">
-                  {[
-                    'Summarize the core concepts in my recent uploads',
-                    'How does reinforcement learning differ from supervised learning?',
-                    'Explain the configuration settings for the backend proxy',
-                  ].map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setInput(suggestion)}
-                      className="px-4 py-2.5 rounded-lg border border-surface-border bg-surface-hover/30 text-left text-xs text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors cursor-pointer leading-relaxed"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Messages flow */
-              <div className="space-y-6">
-                {messages.map(msg => (
-                  <div key={msg.id} className="flex gap-4">
-                    {/* User / Bot Identity badge */}
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 border ${
-                      msg.role === 'user'
-                        ? 'bg-accent-teal/10 border-accent-teal/20 text-accent-teal'
-                        : 'bg-accent-purple/10 border-accent-purple/20 text-accent-purple shadow-[0_0_10px_rgba(99,102,241,0.1)]'
-                    }`}>
-                      {msg.role === 'user' ? <User size={14} /> : <Brain size={14} />}
-                    </div>
-
-                    {/* Content text */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold text-text-muted tracking-wider uppercase">
-                          {msg.role === 'user' ? (user?.name || 'Authorized Member') : 'KnowledgeOS Engine'}
-                        </span>
-                        <span className="text-[9px] text-text-muted">
-                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap font-sans">
-                        {msg.content || (
-                          <span className="flex items-center gap-2 text-text-muted">
-                            <Loader2 size={12} className="animate-spin" /> Ingesting resources...
+    <div className="flex h-[calc(100vh-100px)] overflow-hidden rounded-xl border border-outline-variant glass-panel select-none relative">
+      {/* Left: Chat Column */}
+      <section className="flex-grow flex flex-col min-w-0 bg-surface-dim justify-between h-full">
+        {/* Chat Message Lists */}
+        <div className="flex-1 overflow-y-auto p-gutter custom-scrollbar space-y-xl" id="chat-container">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-on-surface-variant max-w-md mx-auto">
+              <span className="material-symbols-outlined text-4xl mb-4 text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
+                smart_toy
+              </span>
+              <h3 className="font-display-lg text-lg font-bold text-on-surface">AI Research Assistant</h3>
+              <p className="text-xs leading-relaxed text-on-surface-variant mt-2">
+                Ask questions regarding technical reports, legal compliance specs, and financial datasets.
+                Nexus AI will synthesize answers referencing direct citations.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-xl">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${msg.role === 'user' ? 'items-end ml-auto' : 'items-start'} max-w-3xl`}
+                >
+                  {/* Sender title */}
+                  <div className="flex items-center gap-sm mb-xs">
+                    {msg.role === 'assistant' ? (
+                      <>
+                        <div className="w-6 h-6 bg-primary-container rounded-md flex items-center justify-center flex-shrink-0">
+                          <span className="material-symbols-outlined text-[14px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+                            smart_toy
                           </span>
-                        )}
-                      </div>
-
-                      {/* Source Citation chips (rendered inside thread) */}
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] text-text-muted font-bold tracking-wider uppercase">
-                            Sources Cited:
+                        </div>
+                        <span className="font-label-sm text-xs font-bold text-primary">Nexus Engine</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-6 h-6 bg-white/10 rounded-md flex items-center justify-center flex-shrink-0">
+                          <span className="material-symbols-outlined text-[14px] text-on-surface-variant">
+                            person
                           </span>
-                          {msg.sources.map((src, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setSelectedSource(src)}
-                              className={`px-2.5 py-1 rounded text-[10px] font-medium border flex items-center gap-1.5 transition-colors cursor-pointer ${
-                                selectedSource?.snippet === src.snippet
-                                  ? 'bg-accent-teal/10 border-accent-teal/30 text-accent-teal'
-                                  : 'bg-background-elevated border-surface-border text-text-secondary hover:border-text-muted hover:text-text-primary'
-                              }`}
-                            >
-                              <FileText size={10} />
-                              <span>[{idx + 1}] {src.title}</span>
-                            </button>
-                          ))}
+                        </div>
+                        <span className="font-label-sm text-xs font-bold text-on-surface-variant">
+                          {user?.name?.split(' ')[0] ?? 'Explorer'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Bubble content */}
+                  <div className={`border shadow-sm px-lg py-md rounded-2xl ${
+                    msg.role === 'user'
+                      ? 'bg-primary-container/20 border-primary/30 rounded-tr-none text-on-surface'
+                      : 'bg-surface-container-high/40 border-outline-variant/30 rounded-tl-none text-on-surface'
+                  }`}>
+                    <div className="text-xs leading-relaxed whitespace-pre-wrap font-sans">
+                      {msg.content || (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Bottom Inquiries Input */}
-          <div className="border-t border-surface-border p-4 bg-background-elevated flex items-end gap-3.5">
-            <textarea
-              ref={textareaRef}
-              id="qa-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask context questions..."
-              rows={1}
-              className="flex-1 bg-transparent border-none outline-none text-xs leading-relaxed max-h-32 resize-none py-1.5"
-              style={{ color: 'var(--color-text-primary)' }}
-              disabled={isStreaming}
-            />
-            <button
-              id="qa-send-button"
-              onClick={() => void handleSend()}
-              disabled={!input.trim() || isStreaming}
-              className={`p-2.5 rounded-lg border transition-all duration-200 flex-shrink-0 cursor-pointer ${
-                input.trim() && !isStreaming
-                  ? 'bg-text-primary border-transparent text-background hover:scale-[1.03]'
-                  : 'bg-surface border-surface-border text-text-muted cursor-not-allowed'
-              }`}
-            >
-              {isStreaming ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Send size={13} />
-              )}
-            </button>
-          </div>
-
-        </div>
-
-        {/* Right Pane: Citation Inspector Panel (35% width) */}
-        <div className="lg:col-span-4 h-full flex flex-col min-h-0 bg-surface rounded-2xl border border-surface-border p-5 overflow-hidden">
-          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <BookOpen size={13} className="text-accent-teal" /> Citation Inspector
-          </h3>
-
-          {selectedSource ? (
-            <div className="flex-1 flex flex-col justify-between overflow-y-auto space-y-5">
-              
-              {/* Document Summary info */}
-              <div className="space-y-4">
-                <div className="flex items-start gap-2 bg-background-elevated p-3 rounded-xl border border-surface-border">
-                  <FileText size={16} className="text-text-muted mt-0.5 flex-shrink-0" />
-                  <div className="leading-tight min-w-0">
-                    <span className="text-xs font-bold text-text-primary block truncate">
-                      {selectedSource.title}
-                    </span>
-                    <p className="text-[10px] text-text-muted mt-1">
-                      {selectedSource.page ? `Page Location: ${selectedSource.page}` : 'No page coordinates'}
-                    </p>
+                    {/* Citations chip links row */}
+                    {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-4 border-t border-outline-variant/20 pt-2.5">
+                        {msg.sources.map((src, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedSource(src)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                              selectedSource?.snippet === src.snippet
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-surface-container-lowest border-outline-variant text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">link</span>
+                            <span>Source [{index + 1}]</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Excerpt Snippet */}
-                <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider block">
-                    Source Excerpt
-                  </span>
-                  <div className="bg-background-elevated p-4 rounded-xl border border-surface-border text-[11px] text-text-secondary leading-relaxed font-sans max-h-60 overflow-y-auto">
-                    {selectedSource.snippet}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action trigger links */}
-              <div className="space-y-2 pt-4 border-t border-surface-border">
-                <div className="flex items-center justify-between text-[10px] text-text-secondary bg-background-elevated p-2 rounded border border-surface-border">
-                  <span className="flex items-center gap-1"><Info size={10} /> Ingestion Type</span>
-                  <span className="font-semibold text-text-primary">Google Drive Sync</span>
-                </div>
-                <button
-                  onClick={() => window.open(`/api/documents/redirect/${selectedSource.documentId}`, '_blank')}
-                  className="btn-google w-full justify-center py-2.5 rounded-lg border border-surface-border hover:bg-surface-hover cursor-pointer"
-                >
-                  <span className="text-[11px] font-bold">Inspect Source Document</span>
-                  <ExternalLink size={12} className="text-text-muted" />
-                </button>
-              </div>
-
-            </div>
-          ) : (
-            /* Citation Inspector idle panel */
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-6 bg-background-elevated/40 border border-dashed border-surface-border rounded-xl">
-              <BookOpen size={24} className="text-text-muted mb-3" />
-              <h4 className="text-[11px] font-bold text-text-primary uppercase tracking-wider">Awaiting Citations</h4>
-              <p className="text-[10px] text-text-secondary mt-1.5 leading-relaxed max-w-[150px]">
-                Click on cited references in chat messages to verify original file excerpts.
-              </p>
+              ))}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
 
-      </div>
+        {/* Input Pane */}
+        <div className="p-gutter border-t border-outline-variant bg-surface-container-lowest/50">
+          <div className="max-w-3xl mx-auto relative glass-panel rounded-xl p-2 focus-within:ring-2 focus-within:ring-primary/20">
+            <div className="flex flex-col">
+              <textarea
+                ref={textareaRef}
+                className="w-full bg-transparent border-none text-xs p-md focus:ring-0 resize-none max-h-24 custom-scrollbar text-on-surface outline-none"
+                placeholder="Ask Nexus AI about your data..."
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
+              <div className="flex items-center justify-between px-md pb-md">
+                <div className="flex items-center gap-md text-on-surface-variant/60">
+                  <button className="hover:text-primary transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-[18px]">attach_file</span>
+                  </button>
+                  <button className="hover:text-primary transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-[18px]">mic</span>
+                  </button>
+                  <button className="hover:text-primary transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-[18px]">image</span>
+                  </button>
+                </div>
+                <button
+                  onClick={handleSend}
+                  disabled={isStreaming || !input.trim()}
+                  className="bg-primary text-on-primary p-2 rounded-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px] block">send</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-sm text-center">
+            <p className="font-label-sm text-[9px] text-on-surface-variant/40 tracking-wider">
+              NEXUS AI MAY DISPLAY INACCURATE INFO. VERIFY CITATIONS.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Right: Citations panel drawer */}
+      <aside className="w-[360px] bg-surface-container-low border-l border-outline-variant flex flex-col overflow-hidden h-full">
+        <div className="p-md border-b border-outline-variant flex items-center justify-between">
+          <h2 className="font-label-sm text-xs font-bold text-on-surface uppercase tracking-widest flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-primary">menu_book</span>
+            Citations ({citations.length})
+          </h2>
+          <button className="p-1 text-on-surface-variant hover:text-on-surface cursor-pointer">
+            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+          </button>
+        </div>
+
+        {/* Selected Excerpt preview details */}
+        {selectedSource ? (
+          <div className="flex-1 flex flex-col overflow-y-auto p-md space-y-md custom-scrollbar bg-surface-dim/40">
+            <div className="glass-panel p-md rounded-xl border-l-4 border-l-primary flex flex-col justify-between min-h-[200px]">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-bold uppercase">
+                    Active Excerpt
+                  </span>
+                  {selectedSource.page && (
+                    <span className="text-[10px] text-on-surface-variant font-semibold">
+                      Page {selectedSource.page}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-sm font-semibold text-on-surface">
+                  {selectedSource.title}
+                </h3>
+                <p className="text-xs text-on-surface-variant leading-relaxed italic whitespace-pre-wrap font-sans">
+                  "{selectedSource.snippet}"
+                </p>
+              </div>
+              <div className="mt-md pt-3 border-t border-outline-variant/20 flex items-center gap-2 text-[10px] text-on-surface-variant font-mono">
+                <span className="material-symbols-outlined text-[14px]">find_in_page</span>
+                <span>Vector Chunk Reference</span>
+              </div>
+            </div>
+
+            {/* Inactive citations list in the same drawer for visual depth */}
+            <div className="space-y-2 mt-4">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant block mb-1">
+                Other Sources Checked
+              </span>
+              <div className="space-y-2">
+                {citations
+                  .filter((c) => c.snippet !== selectedSource.snippet)
+                  .map((c, index) => (
+                    <div
+                      key={index}
+                      onClick={() => setSelectedSource(c)}
+                      className="p-3 bg-white/5 hover:bg-white/10 rounded-lg border border-outline-variant/30 cursor-pointer text-xs transition-colors"
+                    >
+                      <h4 className="font-semibold text-on-surface truncate">{c.title}</h4>
+                      <p className="text-[10px] text-on-surface-variant truncate mt-1 italic">
+                        "{c.snippet}"
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-on-surface-variant bg-surface-dim/20">
+            <span className="material-symbols-outlined text-4xl mb-3 opacity-30">menu_book</span>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">Source Excerpts</h4>
+            <p className="text-[11px] mt-1.5 leading-relaxed max-w-[180px]">
+              Type a question in the prompt input to receive dynamic references, then click any citation link to view original snippets.
+            </p>
+          </div>
+        )}
+
+        {/* Network topology visualizer mock */}
+        <div className="p-md bg-surface-container-highest/20 border-t border-outline-variant">
+          <div className="relative h-24 rounded-lg overflow-hidden border border-outline-variant bg-surface-dim flex items-center justify-center">
+            <img
+              alt="Data Center Visualization"
+              className="w-full h-full object-cover opacity-30 grayscale"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXgzzYWAPzgtVIhSKIIi62DMK_zGaNIlZ8QQfTx9F7KmGO37akFeC5t_IC-zGAMeyap8RkNH2MURq8uxr6qvBr0aqkrO7llkxLh_yv2fKyzgkLiRN1NZ5CLaExX_1pi0yQmcbK4DQjBg4g9H-HpHPsatQL1az9S9_mA6hoOq7zRFbJnDn308SiEXvDLxsNXBQjnkciUjrbZgqo0qAYd-B7UPCh_uxiWdLiNquI2kA5m2Q3Bf3K24nfHnBgdoiBPTGqI4OH5QVN_jI"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-surface-container-low to-transparent" />
+            <div className="absolute bottom-2 left-2">
+              <p className="font-label-sm text-[9px] text-primary-fixed uppercase tracking-widest font-bold">
+                Knowledge Topology Map
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

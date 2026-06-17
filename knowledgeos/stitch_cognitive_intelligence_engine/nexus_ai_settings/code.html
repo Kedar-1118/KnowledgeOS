@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-surface {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .status-pulse {
+      box-shadow: 0 0 0 0 rgba(78, 222, 163, 0.4);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(78, 222, 163, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(78, 222, 163, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(78, 222, 163, 0); }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "secondary-fixed-dim": "#4edea3",
+            "primary-container": "#4f46e5",
+            "tertiary-fixed": "#ffddb8",
+            "surface": "#0b1326",
+            "secondary": "#4edea3",
+            "primary": "#c3c0ff",
+            "on-primary": "#1d00a5",
+            "surface-container": "#171f33",
+            "on-error": "#690005",
+            "surface-dim": "#0b1326",
+            "on-secondary-fixed": "#002113",
+            "surface-tint": "#c3c0ff",
+            "surface-bright": "#31394d",
+            "on-background": "#dae2fd",
+            "primary-fixed-dim": "#c3c0ff",
+            "inverse-primary": "#4d44e3",
+            "primary-fixed": "#e2dfff",
+            "outline-variant": "#464555",
+            "on-surface": "#dae2fd",
+            "on-tertiary-fixed": "#2a1700",
+            "on-tertiary-container": "#ffd4a4",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-error-container": "#ffdad6",
+            "on-surface-variant": "#c7c4d8",
+            "on-primary-fixed": "#0f0069",
+            "secondary-fixed": "#6ffbbe",
+            "surface-container-high": "#222a3d",
+            "surface-container-lowest": "#060e20",
+            "on-tertiary": "#472a00",
+            "surface-variant": "#2d3449",
+            "tertiary-fixed-dim": "#ffb95f",
+            "on-secondary-fixed-variant": "#005236",
+            "inverse-on-surface": "#283044",
+            "tertiary-container": "#885500",
+            "error-container": "#93000a",
+            "surface-container-low": "#131b2e",
+            "background": "#0b1326",
+            "error": "#ffb4ab",
+            "secondary-container": "#00a572",
+            "surface-container-highest": "#2d3449",
+            "on-primary-container": "#dad7ff",
+            "on-tertiary-fixed-variant": "#653e00",
+            "tertiary": "#ffb95f",
+            "on-secondary-container": "#00311f",
+            "on-secondary": "#003824",
+            "inverse-surface": "#dae2fd",
+            "outline": "#918fa1"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sm": "8px",
+            "xs": "4px",
+            "xl": "32px",
+            "3xl": "64px",
+            "margin-desktop": "40px",
+            "lg": "24px",
+            "base": "8px",
+            "margin-mobile": "16px",
+            "2xl": "48px",
+            "gutter": "24px",
+            "md": "16px"
+          },
+          "fontFamily": {
+            "headline-lg-mobile": ["Geist"],
+            "display-xl": ["Geist"],
+            "body-md": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-lg": ["Geist"],
+            "display-lg": ["Geist"],
+            "code": ["jetbrainsMono"],
+            "label-sm": ["Geist"]
+          },
+          "fontSize": {
+            "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "display-xl": ["72px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+            "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+            "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+            "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.03em", "fontWeight": "600" }],
+            "code": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+            "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-white">
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50">
+<div class="px-md mb-xl">
+<h1 class="font-display-lg text-display-lg font-bold text-primary">Nexus AI</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">Enterprise Suite</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">folder_open</span>
+<span class="font-body-md">Library</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">search</span>
+<span class="font-body-md">Search</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">smart_toy</span>
+<span class="font-body-md">Q&A</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">hub</span>
+<span class="font-body-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors group" href="#">
+<span class="material-symbols-outlined group-active:scale-[0.98]">psychology</span>
+<span class="font-body-md">Revision</span>
+</a>
+</nav>
+<div class="mt-auto px-md">
+<button class="w-full bg-primary-container text-white py-sm rounded-lg font-label-sm flex items-center justify-center gap-xs hover:opacity-90 transition-opacity mb-xl">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Ingestion</span>
+</button>
+<div class="space-y-1">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-body-md">Status</span>
+</a>
+<a class="flex items-center gap-md bg-white/5 border-l-2 border-primary text-primary px-4 py-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant flex justify-between items-center px-gutter z-40 shadow-sm">
+<div class="flex items-center gap-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+<input class="bg-surface-container-low border border-outline-variant rounded-full py-1.5 pl-10 pr-4 text-label-sm focus:ring-2 focus:ring-primary/20 outline-none w-64 transition-all focus:w-80" placeholder="Search parameters..." type="text"/>
+</div>
+<nav class="flex items-center gap-lg">
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">Docs</a>
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">API</a>
+<a class="font-label-sm text-on-surface-variant hover:text-on-surface transition-opacity" href="#">Support</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="bg-primary-container/10 border border-primary/20 text-primary px-4 py-1.5 rounded-full font-label-sm hover:bg-primary-container/20 transition-colors">Upgrade</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-colors p-2">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-colors p-2">help_outline</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-sm">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional close-up studio portrait of a modern software architect with a clean minimalist aesthetic. The lighting is soft and cinematic, using a cool-toned indigo and slate blue color palette. The background is a slightly blurred architectural office with subtle glass elements, maintaining a premium high-tech atmosphere that feels focused and sophisticated." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHaMLsRsq-8nYhJNcb9rpyn5WAslmIvojVMdxVNDBvcnO3O6CtgKuz6i5WE2bnWsDgDaYlEiN15-0AON3fPMy31RE3yTqlq8AVb5Y5qDfzpRoD4KVVSH3D4oLsBcu1Y06gWDQeIxAN59LaaKiT55uaVqfaUC23C2SoaST6JrDZUXJwW0DClzFigjy4EFaqIepSt3DuzlRWAXlA2-_zOnsvaPJiH9zEQgTSDL-OgPPQNh6o43m-tg9U4rfzRKwucRqQf3yHKqLVCRM"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] pt-16 min-h-screen bg-background">
+<div class="max-w-5xl mx-auto p-gutter lg:p-3xl">
+<!-- Header -->
+<div class="mb-xl">
+<h2 class="font-display-lg text-headline-lg text-on-surface">Settings</h2>
+<p class="text-on-surface-variant mt-xs">Configure your personal interface and AI workspace parameters.</p>
+</div>
+<!-- Settings Tabs -->
+<div class="flex gap-xl border-b border-outline-variant mb-xl">
+<button class="pb-md font-label-sm text-primary border-b-2 border-primary transition-all flex items-center gap-sm" id="tab-profile" onclick="switchTab('profile')">
+<span class="material-symbols-outlined text-[20px]">person</span>
+          Profile
+        </button>
+<button class="pb-md font-label-sm text-on-surface-variant hover:text-on-surface border-b-2 border-transparent transition-all flex items-center gap-sm" id="tab-drive" onclick="switchTab('drive')">
+<span class="material-symbols-outlined text-[20px]">cloud_sync</span>
+          Drive Connector
+        </button>
+<button class="pb-md font-label-sm text-on-surface-variant hover:text-on-surface border-b-2 border-transparent transition-all flex items-center gap-sm" id="tab-preferences" onclick="switchTab('preferences')">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+          Preferences
+        </button>
+</div>
+<!-- Tab Content: Profile -->
+<div class="tab-pane space-y-xl" id="content-profile">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-xl">
+<div class="md:col-span-1">
+<h3 class="font-headline-lg text-body-lg font-semibold">User Identity</h3>
+<p class="text-on-surface-variant text-label-sm mt-xs">Personal details and account security markers.</p>
+</div>
+<div class="md:col-span-2 glass-surface p-lg rounded-xl space-y-lg">
+<div class="flex items-center gap-xl">
+<div class="relative group cursor-pointer">
+<img alt="User Profile" class="w-24 h-24 rounded-2xl object-cover border-2 border-outline-variant group-hover:border-primary transition-colors" data-alt="A professional close-up studio portrait of a modern software architect with a clean minimalist aesthetic. The lighting is soft and cinematic, using a cool-toned indigo and slate blue color palette. The background is a slightly blurred architectural office with subtle glass elements, maintaining a premium high-tech atmosphere that feels focused and sophisticated." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4sbbSFjNMCotwetoiWW03KzMYtwaHkOoaYGFUt8vMlaUtvjSavx8Bc7CtW5inzCzo8y661ICLE7_-lgGDPUtHFcnCa2DD0Sbm3O3BHmVfxxU2UyclrM33L9PqLuKCK5yXkbVUI84Ny_7wl-o5vF9SdzwmfjCPN75K1nBLLrJSk-sMa1jaFbfTh_gM3Glwugi_D24GYmbUnYbBNFN2Dr1A5IJoxfyeF9dWmmjeiiekyV56IcWavJxM6UZ7csXhhZ1CoKp-4rjgNGk"/>
+<div class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white">edit</span>
+</div>
+</div>
+<div>
+<p class="font-body-md font-semibold">Julian Sterling</p>
+<p class="text-on-surface-variant text-label-sm">julian@nexusai.io</p>
+<div class="flex gap-sm mt-md">
+<span class="bg-secondary/10 text-secondary border border-secondary/20 px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold">Pro User</span>
+<span class="bg-surface-variant text-on-surface-variant px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold">Enterprise Tier</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-lg pt-md">
+<div class="flex flex-col gap-xs">
+<label class="text-label-sm text-on-surface-variant">First Name</label>
+<input class="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all" type="text" value="Julian"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="text-label-sm text-on-surface-variant">Last Name</label>
+<input class="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all" type="text" value="Sterling"/>
+</div>
+<div class="col-span-2 flex flex-col gap-xs">
+<label class="text-label-sm text-on-surface-variant">Role / Bio</label>
+<textarea class="bg-surface-container-low border border-outline-variant rounded-lg p-sm text-body-md focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none" rows="3">Senior Solutions Architect specializing in LLM knowledge integration and enterprise vector databases.</textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab Content: Drive Connector -->
+<div class="tab-pane hidden space-y-xl" id="content-drive">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-xl">
+<div class="md:col-span-1">
+<h3 class="font-headline-lg text-body-lg font-semibold">Sync Constraints</h3>
+<p class="text-on-surface-variant text-label-sm mt-xs">Define how Nexus AI interacts with your external cloud storage providers.</p>
+</div>
+<div class="md:col-span-2 space-y-md">
+<!-- Connector Card 1 -->
+<div class="glass-surface p-lg rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-lg">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">add_to_drive</span>
+</div>
+<div>
+<h4 class="font-body-md font-medium">Google Drive</h4>
+<div class="flex items-center gap-xs mt-0.5">
+<span class="w-2 h-2 rounded-full bg-secondary status-pulse"></span>
+<span class="text-label-sm text-secondary font-medium">Connected</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="text-label-sm text-on-surface-variant hover:text-on-surface transition-colors">Configure</button>
+<div class="w-px h-6 bg-outline-variant"></div>
+<button class="text-label-sm text-error hover:opacity-80 transition-opacity">Disconnect</button>
+</div>
+</div>
+<!-- Connector Card 2 -->
+<div class="glass-surface p-lg rounded-xl flex items-center justify-between border-dashed border-outline-variant opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+<div class="flex items-center gap-lg">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-3xl">cloud_queue</span>
+</div>
+<div>
+<h4 class="font-body-md font-medium">OneDrive Business</h4>
+<p class="text-label-sm text-on-surface-variant">Not connected</p>
+</div>
+</div>
+<button class="bg-surface-variant text-on-surface px-4 py-1.5 rounded-lg font-label-sm hover:bg-outline-variant transition-colors">Setup</button>
+</div>
+<!-- Detailed Sync Options -->
+<div class="glass-surface p-lg rounded-xl mt-xl">
+<h4 class="font-body-md font-semibold mb-lg">Global Sync Settings</h4>
+<div class="space-y-lg">
+<div class="flex justify-between items-center">
+<div>
+<p class="font-body-md">Auto-Ingestion</p>
+<p class="text-label-sm text-on-surface-variant">Automatically index new files detected in roots.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-body-md">OCR Extraction</p>
+<p class="text-label-sm text-on-surface-variant">Enable Optical Character Recognition for scanned PDFs.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<div class="pt-md border-t border-outline-variant">
+<label class="text-label-sm text-on-surface-variant block mb-sm">Sync Interval (Minutes)</label>
+<div class="flex items-center gap-xl">
+<input class="flex-1 accent-primary h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer" max="60" min="5" step="5" type="range" value="15"/>
+<span class="text-body-md font-code text-primary w-12 text-right">15m</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab Content: Preferences -->
+<div class="tab-pane hidden space-y-xl" id="content-preferences">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-xl">
+<div class="md:col-span-1">
+<h3 class="font-headline-lg text-body-lg font-semibold">Interface Experience</h3>
+<p class="text-on-surface-variant text-label-sm mt-xs">Tailor the visual density and system notifications to your workflow.</p>
+</div>
+<div class="md:col-span-2 space-y-md">
+<!-- Appearance Group -->
+<div class="glass-surface p-lg rounded-xl">
+<h4 class="font-body-md font-semibold mb-lg">Visual Theme</h4>
+<div class="grid grid-cols-3 gap-md">
+<button class="flex flex-col gap-sm p-sm rounded-lg border-2 border-primary bg-primary-container/10">
+<div class="w-full h-16 bg-surface rounded-md border border-outline-variant relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-4 bg-surface-container-lowest"></div>
+<div class="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary/20"></div>
+</div>
+<span class="text-label-sm text-primary font-bold">Dark (Default)</span>
+</button>
+<button class="flex flex-col gap-sm p-sm rounded-lg border-2 border-transparent hover:border-outline-variant transition-colors">
+<div class="w-full h-16 bg-white rounded-md border border-gray-200 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-4 bg-gray-50"></div>
+<div class="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-100"></div>
+</div>
+<span class="text-label-sm text-on-surface-variant">Light Pro</span>
+</button>
+<button class="flex flex-col gap-sm p-sm rounded-lg border-2 border-transparent hover:border-outline-variant transition-colors">
+<div class="w-full h-16 bg-slate-900 rounded-md border border-slate-800 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-4 bg-black"></div>
+<div class="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-500/30"></div>
+</div>
+<span class="text-label-sm text-on-surface-variant">OLED Pitch</span>
+</button>
+</div>
+</div>
+<!-- Toggles Group -->
+<div class="glass-surface p-lg rounded-xl space-y-lg">
+<div class="flex justify-between items-center">
+<div>
+<p class="font-body-md">Compact Mode</p>
+<p class="text-label-sm text-on-surface-variant">Reduce vertical padding for dense data views.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-body-md">System Notifications</p>
+<p class="text-label-sm text-on-surface-variant">Alerts for task completion and ingestion errors.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-body-md">Sound Feedback</p>
+<p class="text-label-sm text-on-surface-variant">Subtle auditory cues for interface actions.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+<div class="glass-surface p-lg rounded-xl">
+<h4 class="font-body-md font-semibold mb-lg">Export Options</h4>
+<div class="flex gap-md">
+<button class="flex-1 bg-surface-container-high border border-outline-variant py-2.5 rounded-lg font-label-sm hover:bg-surface-bright transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                  Export Settings (JSON)
+                </button>
+<button class="flex-1 bg-surface-container-high border border-outline-variant py-2.5 rounded-lg font-label-sm hover:bg-surface-bright transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+                  Import Configuration
+                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions Footer -->
+<div class="mt-2xl flex justify-end gap-md pt-xl border-t border-outline-variant">
+<button class="px-xl py-2.5 rounded-lg font-label-sm text-on-surface-variant hover:text-on-surface transition-colors">Discard Changes</button>
+<button class="px-xl py-2.5 rounded-lg font-label-sm bg-primary-container text-white shadow-lg shadow-primary-container/15 hover:opacity-90 active:scale-95 transition-all">Save Workspace</button>
+</div>
+</div>
+</main>
+<script>
+    function switchTab(tabId) {
+      // Update Tab Styles
+      const tabs = ['profile', 'drive', 'preferences'];
+      tabs.forEach(t => {
+        const tabBtn = document.getElementById(`tab-${t}`);
+        const contentPane = document.getElementById(`content-${t}`);
+        
+        if (t === tabId) {
+          tabBtn.classList.remove('text-on-surface-variant', 'border-transparent');
+          tabBtn.classList.add('text-primary', 'border-primary');
+          contentPane.classList.remove('hidden');
+        } else {
+          tabBtn.classList.add('text-on-surface-variant', 'border-transparent');
+          tabBtn.classList.remove('text-primary', 'border-primary');
+          contentPane.classList.add('hidden');
+        }
+      });
+    }
+
+    // Initialize with a subtle entrance animation
+    document.addEventListener('DOMContentLoaded', () => {
+      const main = document.querySelector('main');
+      main.style.opacity = '0';
+      main.style.transform = 'translateY(10px)';
+      main.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+      
+      requestAnimationFrame(() => {
+        main.style.opacity = '1';
+        main.style.transform = 'translateY(0)';
+      });
+    });
+  </script>
+</body></html>

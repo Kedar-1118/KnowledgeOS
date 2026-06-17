@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nexus AI | Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#4edea3",
+                        "primary-container": "#4f46e5",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface": "#0b1326",
+                        "secondary": "#4edea3",
+                        "primary": "#c3c0ff",
+                        "on-primary": "#1d00a5",
+                        "surface-container": "#171f33",
+                        "on-error": "#690005",
+                        "surface-dim": "#0b1326",
+                        "on-secondary-fixed": "#002113",
+                        "surface-tint": "#c3c0ff",
+                        "surface-bright": "#31394d",
+                        "on-background": "#dae2fd",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "inverse-primary": "#4d44e3",
+                        "primary-fixed": "#e2dfff",
+                        "outline-variant": "#464555",
+                        "on-surface": "#dae2fd",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-tertiary-container": "#ffd4a4",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#c7c4d8",
+                        "on-primary-fixed": "#000000",
+                        "secondary-fixed": "#6ffbbe",
+                        "surface-container-high": "#222a3d",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary": "#472a00",
+                        "surface-variant": "#2d3449",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-secondary-fixed-variant": "#005236",
+                        "inverse-on-surface": "#283044",
+                        "tertiary-container": "#885500",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#131b2e",
+                        "background": "#0b1326",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#00a572",
+                        "surface-container-highest": "#2d3449",
+                        "on-primary-container": "#dad7ff",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary": "#ffb95f",
+                        "on-secondary-container": "#00311f",
+                        "on-secondary": "#003824",
+                        "inverse-surface": "#dae2fd",
+                        "outline": "#918fa1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "3xl": "64px",
+                        "margin-desktop": "40px",
+                        "lg": "24px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "2xl": "48px",
+                        "gutter": "24px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-xl": ["Geist"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "code": ["JetBrains Mono"],
+                        "label-sm": ["Geist"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(23, 31, 51, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .status-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #464555; border-radius: 10px; }
+        .inspector-active { transform: translateX(0); opacity: 1; }
+        .inspector-hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-[60]">
+<div class="px-lg mb-2xl">
+<h1 class="font-display-lg text-display-lg font-bold text-primary tracking-tight">Nexus AI</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-60">Enterprise Suite</p>
+</div>
+<nav class="flex-1 flex flex-col gap-xs px-md">
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<!-- Library Active State Mapping -->
+<a class="flex items-center gap-md bg-white/5 border-l-2 border-primary text-primary px-4 py-2 scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-body-md text-body-md">Library</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-body-md text-body-md">Search</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-body-md text-body-md">Q&amp;A</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-body-md text-body-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-body-md text-body-md">Revision</span>
+</a>
+</nav>
+<div class="mt-auto px-md pt-lg border-t border-outline-variant/30 flex flex-col gap-xs">
+<button class="bg-primary text-on-primary-fixed font-bold py-sm rounded px-md mb-md hover:brightness-110 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>New Ingestion</span>
+</button>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-body-md text-body-md">Status</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant hover:text-on-surface px-4 py-2 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-sm flex justify-between items-center h-16 px-gutter">
+<div class="flex items-center gap-xl w-1/3">
+<div class="relative w-full max-w-sm">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full pl-10 pr-4 py-1.5 font-label-sm text-label-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Search library documents..." type="text"/>
+</div>
+</div>
+<nav class="flex items-center gap-lg">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">Docs</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">API</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface" href="#">Support</a>
+</nav>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-opacity p-2">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface transition-opacity p-2">help_outline</button>
+<button class="bg-primary text-on-primary-fixed px-4 py-1.5 rounded-full font-label-sm text-label-sm font-bold hover:brightness-110 transition-all">Upgrade</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCm18-a9asGDbeoDHD-roUyO4i5NgUVNRMNL2yaIqD8Mri9TUR_flH0ZHO9Yno6b9PeYBSn7R4Ob7fQCT68_apmqbwLNUS0JzjqwGD-jTPa4YyO6A3plnK4ZcoZ-_gp7915VUPsnjTu-eWC8vbAjDbG403Nr4TQiPo8vBlC6rT9WtS5URyqLQ08ScpWOmPVhJ3r45igQlOiCT_YUf3wOv7GREYRY--TqPGUTYhqCa2GdLCJLZU7tAE_CLs1VYhNspoNpXaW_GuHb7Q"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] pt-16 min-h-screen relative flex">
+<!-- Library Canvas -->
+<section class="flex-1 p-gutter overflow-hidden flex flex-col gap-lg">
+<!-- Page Title & Quick Actions -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg tracking-tight mb-2">Document Library</h2>
+<p class="text-on-surface-variant max-w-lg">Manage your indexed datasets and ingest new knowledge sources into the Nexus AI neural network.</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 rounded border border-outline-variant bg-surface-container-low hover:bg-surface-container-high transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Filter View
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded border border-outline-variant bg-surface-container-low hover:bg-surface-container-high transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+                        Export Manifest
+                    </button>
+</div>
+</div>
+<!-- Filters Bar -->
+<div class="flex flex-wrap gap-md items-center glass-panel p-4 rounded-xl">
+<div class="flex items-center gap-sm pr-4 border-r border-outline-variant">
+<span class="font-label-sm text-label-sm text-on-surface-variant">FORMATS</span>
+<div class="flex gap-2">
+<span class="bg-primary-container/20 text-on-primary-container px-3 py-1 rounded-full text-[11px] font-bold border border-primary/30 cursor-pointer">ALL</span>
+<span class="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-full text-[11px] font-bold border border-outline-variant cursor-pointer hover:border-primary/50">PDF</span>
+<span class="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-full text-[11px] font-bold border border-outline-variant cursor-pointer hover:border-primary/50">DOCX</span>
+<span class="bg-surface-container-high text-on-surface-variant px-3 py-1 rounded-full text-[11px] font-bold border border-outline-variant cursor-pointer hover:border-primary/50">CSV</span>
+</div>
+</div>
+<div class="flex items-center gap-sm px-4">
+<span class="font-label-sm text-label-sm text-on-surface-variant">INDEX STATUS</span>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-[11px] font-bold">INDEXED</span>
+</button>
+<button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-amber-400"></span>
+<span class="text-[11px] font-bold">PROCESSING</span>
+</button>
+<button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-blue-400"></span>
+<span class="text-[11px] font-bold">PENDING</span>
+</button>
+<button class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="text-[11px] font-bold">FAILED</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Documents Table -->
+<div class="glass-panel rounded-xl overflow-hidden flex-1 flex flex-col">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/50 border-b border-outline-variant">
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">FILENAME</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">FORMAT</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">SIZE</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">LAST UPDATED</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">STATUS</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant text-right">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group" onclick="toggleInspector('Quarterly_Growth_Analysis_2024.pdf')">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-red-400">picture_as_pdf</span>
+<span class="font-medium text-on-surface">Quarterly_Growth_Analysis_2024.pdf</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="font-code text-[12px] opacity-70">PDF</span></td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">4.2 MB</td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">2 hours ago</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary status-pulse"></span>
+<span class="text-[11px] font-bold text-secondary">INDEXED</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface opacity-0 group-hover:opacity-100 transition-all">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group" onclick="toggleInspector('Customer_Feedback_Raw_Data.csv')">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">table_chart</span>
+<span class="font-medium text-on-surface">Customer_Feedback_Raw_Data.csv</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="font-code text-[12px] opacity-70">CSV</span></td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">12.8 MB</td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">5 mins ago</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-spin" style="animation-duration: 3s"></span>
+<span class="text-[11px] font-bold text-amber-400">PROCESSING</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface opacity-0 group-hover:opacity-100 transition-all">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group" onclick="toggleInspector('Internal_Knowledge_Base_V2.docx')">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">description</span>
+<span class="font-medium text-on-surface">Internal_Knowledge_Base_V2.docx</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="font-code text-[12px] opacity-70">DOCX</span></td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">1.1 MB</td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">Yesterday</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-[11px] font-bold text-secondary">INDEXED</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface opacity-0 group-hover:opacity-100 transition-all">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group" onclick="toggleInspector('Legal_Compliance_Review.pdf')">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-red-400">picture_as_pdf</span>
+<span class="font-medium text-on-surface">Legal_Compliance_Review.pdf</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="font-code text-[12px] opacity-70">PDF</span></td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">850 KB</td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">Oct 24, 2023</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="text-[11px] font-bold text-error">FAILED</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface opacity-0 group-hover:opacity-100 transition-all">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 cursor-pointer transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-400">table_chart</span>
+<span class="font-medium text-on-surface">Annual_Tax_Statements.csv</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="font-code text-[12px] opacity-70">CSV</span></td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">22.4 MB</td>
+<td class="px-6 py-4 text-on-surface-variant text-sm">Just now</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+<span class="text-[11px] font-bold text-blue-400">PENDING</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface opacity-0 group-hover:opacity-100 transition-all">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination / Info -->
+<div class="mt-auto border-t border-outline-variant p-4 flex justify-between items-center bg-surface-container-low/30">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Showing 5 of 124 documents</span>
+<div class="flex gap-2">
+<button class="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all material-symbols-outlined text-[18px]">chevron_left</button>
+<button class="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all material-symbols-outlined text-[18px]">chevron_right</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Inspector Panel (Details Drawer) -->
+<aside class="w-[400px] h-[calc(100vh-64px)] fixed right-0 top-16 bg-surface-container border-l border-outline-variant inspector-hidden transition-all duration-300 ease-in-out z-40 overflow-y-auto" id="inspector-panel">
+<div class="p-lg">
+<!-- Header -->
+<div class="flex justify-between items-start mb-xl">
+<div>
+<span class="font-label-sm text-label-sm text-primary-container bg-primary-container/10 px-2 py-0.5 rounded mb-2 inline-block">DOCUMENT INSPECTOR</span>
+<h3 class="font-headline-lg text-[22px] leading-tight" id="inspector-title">Document_Details.pdf</h3>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface" onclick="closeInspector()">close</button>
+</div>
+<!-- Preview Area (Placeholder) -->
+<div class="w-full aspect-video rounded-lg mb-xl relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center border border-white/5">
+<span class="material-symbols-outlined text-primary text-5xl opacity-40">find_in_page</span>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-surface/60 backdrop-blur-sm transition-opacity">
+<button class="bg-white text-black px-4 py-2 rounded-full font-bold text-sm">Open Full Preview</button>
+</div>
+</div>
+<!-- AI Summary -->
+<div class="mb-xl">
+<div class="flex items-center gap-2 mb-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">smart_toy</span>
+<span class="font-bold text-sm tracking-wide">AI ABSTRACT SUMMARY</span>
+</div>
+<div class="glass-panel p-4 rounded-lg">
+<p class="text-sm leading-relaxed text-on-surface-variant">
+                            This document provides a comprehensive analysis of fiscal growth vectors within the technology sector for the first half of 2024. Key highlights include a 15% increase in operational efficiency due to AI implementation, market shifts towards decentralized storage, and a projected CAGR of 8.4% for infrastructure-as-code providers. The report suggests a strategic pivot towards edge computing nodes.
+                        </p>
+</div>
+</div>
+<!-- Tags & Metadata -->
+<div class="mb-xl">
+<div class="flex items-center gap-2 mb-sm">
+<span class="material-symbols-outlined text-secondary text-[20px]">label</span>
+<span class="font-bold text-sm tracking-wide">CATEGORIZATION</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 rounded bg-surface-container-high border border-outline-variant text-[11px] font-bold">FINANCIAL_REPORT</span>
+<span class="px-3 py-1 rounded bg-surface-container-high border border-outline-variant text-[11px] font-bold">TECH_SECTOR</span>
+<span class="px-3 py-1 rounded bg-surface-container-high border border-outline-variant text-[11px] font-bold">FORECAST_2024</span>
+<span class="px-3 py-1 rounded bg-surface-container-high border border-outline-variant text-[11px] font-bold">STRATEGY</span>
+</div>
+</div>
+<!-- Metrics Grid -->
+<div>
+<div class="flex items-center gap-2 mb-sm">
+<span class="material-symbols-outlined text-amber-400 text-[20px]">analytics</span>
+<span class="font-bold text-sm tracking-wide">INDEXING METRICS</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="glass-panel p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Tokens Generated</p>
+<p class="font-code text-xl text-primary">124,582</p>
+</div>
+<div class="glass-panel p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Neural Entropy</p>
+<p class="font-code text-xl text-secondary">0.042</p>
+</div>
+<div class="glass-panel p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Read Time</p>
+<p class="font-code text-xl text-on-surface">12m 40s</p>
+</div>
+<div class="glass-panel p-3 rounded-lg">
+<p class="text-[10px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Relevance</p>
+<p class="font-code text-xl text-amber-400">98.2%</p>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="mt-xl pt-lg border-t border-outline-variant flex gap-3">
+<button class="flex-1 bg-surface-container-highest text-on-surface font-bold py-2 rounded border border-outline-variant hover:bg-white/5 transition-all text-sm">Download Source</button>
+<button class="flex-1 bg-error/10 text-error font-bold py-2 rounded border border-error/20 hover:bg-error/20 transition-all text-sm">Purge Index</button>
+</div>
+</div>
+</aside>
+</main>
+<!-- Floating Action Button (FAB) - Suppressed as per context "Details/Transaction screens" rule, but Library is top-level enough to keep ingest accessible -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary-fixed rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[100] group">
+<span class="material-symbols-outlined text-2xl">upload_file</span>
+<span class="absolute right-full mr-4 bg-surface px-3 py-1 rounded text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity border border-outline-variant pointer-events-none">QUICK INGESTION</span>
+</button>
+<script>
+        const inspector = document.getElementById('inspector-panel');
+        const inspectorTitle = document.getElementById('inspector-title');
+
+        function toggleInspector(filename) {
+            inspector.classList.remove('inspector-hidden');
+            inspector.classList.add('inspector-active');
+            inspectorTitle.innerText = filename;
+            
+            // Add visual feedback to selected row (mock)
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(r => r.classList.remove('bg-white/10'));
+            event.currentTarget.classList.add('bg-white/10');
+        }
+
+        function closeInspector() {
+            inspector.classList.remove('inspector-active');
+            inspector.classList.add('inspector-hidden');
+            
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(r => r.classList.remove('bg-white/10'));
+        }
+
+        // Close on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeInspector();
+        });
+    </script>
+</body></html>
