@@ -62,6 +62,16 @@ async function updateJobStatus(
 }
 
 /**
+ * Sanitize strings by removing null bytes (\x00 / \u0000) to prevent Postgres database insertion errors.
+ */
+function sanitizeString(str: string): string;
+function sanitizeString(str: string | null | undefined): string | null;
+function sanitizeString(str: string | null | undefined): string | null {
+  if (str === null || str === undefined) return null;
+  return str.replace(/\0/g, '');
+}
+
+/**
  * Register all job workers on their respective queues.
  */
 export function registerJobWorkers(): void {
@@ -101,9 +111,9 @@ export function registerJobWorkers(): void {
           data: parseResult.chunks.map((chunk, index) => ({
             documentId,
             chunkIndex: index,
-            content: chunk.content,
+            content: sanitizeString(chunk.content),
             tokenCount: chunk.tokenCount,
-            headingContext: chunk.headingContext,
+            headingContext: sanitizeString(chunk.headingContext),
             pageNumber: chunk.pageNumber,
           })),
         });
@@ -113,8 +123,8 @@ export function registerJobWorkers(): void {
       await prisma.document.update({
         where: { id: documentId },
         data: {
-          title: parseResult.title,
-          author: parseResult.author,
+          title: sanitizeString(parseResult.title),
+          author: sanitizeString(parseResult.author),
           readingTimeMinutes: parseResult.readingTimeMinutes,
           status: 'PROCESSING',
         },
@@ -250,7 +260,7 @@ export function registerJobWorkers(): void {
         await prisma.document.update({
           where: { id: documentId },
           data: {
-            summary,
+            summary: sanitizeString(summary),
             summaryGeneratedAt: new Date(),
           },
         });
@@ -316,13 +326,15 @@ export function registerJobWorkers(): void {
         });
 
         for (const tag of tags) {
+          const sanitizedLabel = sanitizeString(tag.label);
+          const sanitizedCategory = sanitizeString(tag.category);
           const tagRecord = await prisma.tag.upsert({
-            where: { name: tag.label },
-            update: { category: tag.category },
+            where: { name: sanitizedLabel },
+            update: { category: sanitizedCategory },
             create: {
-              name: tag.label,
-              category: tag.category,
-              color: generateTagColor(tag.category),
+              name: sanitizedLabel,
+              category: sanitizedCategory,
+              color: generateTagColor(sanitizedCategory),
             },
           });
 
@@ -392,17 +404,19 @@ export function registerJobWorkers(): void {
       // Create/update KnowledgeNode records
       if (entities) {
         for (const entity of entities) {
-          const nodeType = mapEntityType(entity.type);
+          const sanitizedText = sanitizeString(entity.text);
+          const sanitizedType = sanitizeString(entity.type);
+          const nodeType = mapEntityType(sanitizedType);
           await prisma.knowledgeNode.upsert({
             where: {
-              userId_label: { userId, label: entity.text },
+              userId_label: { userId, label: sanitizedText },
             },
             update: {
               description: `Mentioned ${entity.count} time(s) in documents`,
             },
             create: {
               userId,
-              label: entity.text,
+              label: sanitizedText,
               type: nodeType,
               description: `Extracted from document. Mentioned ${entity.count} time(s).`,
             },
