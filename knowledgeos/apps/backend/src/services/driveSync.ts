@@ -116,7 +116,25 @@ async function findOrCreateKnowledgeFolder(
   });
 
   if (user?.driveFolderId) {
-    return user.driveFolderId;
+    try {
+      await withRetry(() =>
+        drive.files.get({
+          fileId: user.driveFolderId!,
+          fields: 'id, trashed',
+        })
+      );
+      return user.driveFolderId;
+    } catch (err: any) {
+      if (err.code === 404) {
+        logger.warn(`Cached folder ID ${user.driveFolderId} not found on Drive. Resetting and re-creating...`);
+        await prisma.user.update({
+          where: { id: userId },
+          data: { driveFolderId: null },
+        });
+      } else {
+        throw err;
+      }
+    }
   }
 
   // Search for existing KnowledgeOS folder

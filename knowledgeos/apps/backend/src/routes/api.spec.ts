@@ -79,7 +79,7 @@ describe('API Router Integration Tests', () => {
     beforeEach(() => {
       token = jwt.sign(
         { userId: testUser.id, email: testUser.email },
-        process.env['JWT_SECRET'] ?? 'dev-jwt-secret-change-me'
+        'dev-jwt-secret-change-me'
       );
       prismaMock.user.findUnique.mockResolvedValue(testUser);
     });

@@ -79,6 +79,7 @@ driveRouter.get('/status', async (req: Request, res: Response) => {
       prisma.document.count({ where: { userId: req.user.id, status: 'FAILED' } }),
     ]);
 
+
     // Get last sync time (most recent document creation)
     const lastDocument = await prisma.document.findFirst({
       where: { userId: req.user.id },
@@ -86,19 +87,27 @@ driveRouter.get('/status', async (req: Request, res: Response) => {
       select: { createdAt: true },
     });
 
-    // Get active processing jobs
-    const activeJobs = await prisma.processingJob.count({
-      where: {
-        document: { userId: req.user.id },
-        status: { in: ['QUEUED', 'RUNNING'] },
-      },
-    });
+    // Get active processing jobs and cached folder ID
+    const [activeJobs, user] = await Promise.all([
+      prisma.processingJob.count({
+        where: {
+          document: { userId: req.user.id },
+          status: { in: ['QUEUED', 'RUNNING'] },
+        },
+      }),
+      prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { driveFolderId: true },
+      }),
+    ]);
 
     res.json({
       success: true,
       data: {
         isRunning: processingDocs > 0 || activeJobs > 0,
         lastSyncAt: lastDocument?.createdAt?.toISOString() ?? null,
+        driveFolderId: user?.driveFolderId ?? null,
+        driveFolderUrl: user?.driveFolderId ? `https://drive.google.com/drive/folders/${user.driveFolderId}` : null,
         documents: {
           total: totalDocs,
           pending: pendingDocs,
