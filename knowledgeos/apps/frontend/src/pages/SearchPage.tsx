@@ -1,26 +1,22 @@
 // apps/frontend/src/pages/SearchPage.tsx
 /**
- * Semantic Search Page
- *
- * Features:
- * - Large centered search bar with ⌘K shortcut
- * - Recent searches from localStorage
- * - Results with highlighted matching text, tags, score bars
- * - Filters sidebar (tag, file type, date range)
- * - Skeleton loading states
- * - Empty state
+ * Redesigned Semantic Search Page.
+ * Spotlight-style search bar combined with a side-by-side Live Preview Panel.
+ * Left Pane displays search results; Right Pane displays selected chunk preview in detail.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Search,
+  Search as SearchIcon,
   FileText,
   Filter,
   X,
   Clock,
   ChevronRight,
   Sparkles,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
 
 import { api } from '../lib/api';
@@ -71,6 +67,7 @@ export function SearchPage() {
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ⌘K / Ctrl+K keyboard shortcut
@@ -85,7 +82,7 @@ export function SearchPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Search query
+  // Search query fetching
   const { data, isLoading, isFetching } = useQuery<SearchResponse>({
     queryKey: ['search', submittedQuery],
     queryFn: async () => {
@@ -104,36 +101,45 @@ export function SearchPage() {
       setSubmittedQuery(trimmed);
       addRecentSearch(trimmed);
       setShowRecent(false);
+      setSelectedResult(null); // Reset selection
     }
   }, []);
+
+  // Set default selection when data arrives
+  useEffect(() => {
+    if (data && data.results.length > 0) {
+      setSelectedResult(data.results[0] || null);
+    } else {
+      setSelectedResult(null);
+    }
+  }, [data]);
 
   const recentSearches = getRecentSearches();
 
   return (
-    <div className="animate-fade-in max-w-4xl mx-auto">
-      {/* Search Header */}
-      <div className="mb-8">
-        <h1
-          className="text-2xl font-semibold mb-1"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
-          Search
+    <div className="animate-fade-in max-w-7xl mx-auto space-y-6 select-none">
+      
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-extrabold text-text-primary font-sans uppercase tracking-wider">
+          Semantic Finder
         </h1>
-        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Semantic search across all your indexed documents
+        <p className="text-xs text-text-secondary mt-1">
+          Perform concept-based neural searches across Google Drive files.
         </p>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative mb-6">
+      {/* Spotlight Command Bar */}
+      <div className="relative">
         <div
-          className="flex items-center gap-3 px-5 py-4 rounded-xl transition-all duration-200"
+          className="flex items-center gap-3 px-5 py-4.5 rounded-xl border transition-all duration-200"
           style={{
             backgroundColor: 'var(--color-surface)',
-            border: `1px solid ${showRecent ? 'var(--color-accent-teal)' : 'var(--color-surface-border)'}`,
+            borderColor: showRecent ? 'var(--color-accent-teal)' : 'var(--color-surface-border)',
+            boxShadow: showRecent ? '0 0 20px rgba(14,165,233,0.1)' : 'none',
           }}
         >
-          <Search size={20} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+          <SearchIcon size={18} className="text-text-muted flex-shrink-0" />
           <input
             ref={inputRef}
             id="search-input"
@@ -149,291 +155,294 @@ export function SearchPage() {
                 inputRef.current?.blur();
               }
             }}
-            placeholder="Search your knowledge..."
-            className="flex-1 bg-transparent border-none outline-none text-base"
+            placeholder="Search matching concepts or ask a question (e.g. 'explain neural backpropagation')..."
+            className="flex-1 bg-transparent border-none outline-none text-sm font-sans"
             style={{ color: 'var(--color-text-primary)' }}
             autoFocus
           />
           {query && (
             <button
-              onClick={() => { setQuery(''); setSubmittedQuery(''); }}
-              className="p-1 rounded-md transition-colors"
-              style={{ color: 'var(--color-text-muted)' }}
+              onClick={() => { setQuery(''); setSubmittedQuery(''); setSelectedResult(null); }}
+              className="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
-          <kbd
-            className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              color: 'var(--color-text-muted)',
-              border: '1px solid var(--color-surface-border)',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
+          <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-background-elevated border border-surface-border text-text-muted font-mono">
             ⌘K
           </kbd>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="p-2 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors cursor-pointer"
             style={{
               color: showFilters ? 'var(--color-accent-teal)' : 'var(--color-text-muted)',
-              backgroundColor: showFilters ? 'rgba(29,158,117,0.1)' : 'transparent',
+              backgroundColor: showFilters ? 'rgba(14,165,233,0.08)' : 'transparent',
             }}
           >
-            <Filter size={18} />
+            <Filter size={16} />
           </button>
         </div>
 
-        {/* Recent Searches Dropdown */}
+        {/* Recent queries suggestion dropdown */}
         {showRecent && !submittedQuery && recentSearches.length > 0 && (
-          <div
-            className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-20"
-            style={{
-              backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-surface-border)',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-            }}
-          >
-            <div className="px-4 py-2.5">
-              <span className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                Recent searches
+          <div className="absolute top-full left-0 right-0 mt-2.5 rounded-xl border border-surface-border bg-surface shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
+            <div className="px-4 py-2 border-b border-surface-border">
+              <span className="text-[10px] font-bold text-text-muted tracking-wider uppercase">
+                Recent Search Inquiries
               </span>
             </div>
-            {recentSearches.map((recent, i) => (
-              <button
-                key={i}
-                onClick={() => { setQuery(recent); handleSubmit(recent); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                style={{ color: 'var(--color-text-secondary)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <Clock size={14} style={{ color: 'var(--color-text-muted)' }} />
-                <span className="text-sm flex-1">{recent}</span>
-                <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
-              </button>
-            ))}
+            <div className="max-h-60 overflow-y-auto">
+              {recentSearches.map((recent, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setQuery(recent); handleSubmit(recent); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary cursor-pointer"
+                >
+                  <Clock size={12} className="text-text-muted" />
+                  <span className="flex-1 font-medium">{recent}</span>
+                  <ChevronRight size={12} className="text-text-muted" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Results */}
-      {isLoading || isFetching ? (
-        <div className="flex flex-col gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div
-              key={i}
-              className="rounded-xl p-5"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-surface-border)',
-              }}
-            >
-              <div className="skeleton h-5 w-3/4 mb-3" />
-              <div className="skeleton h-3 w-full mb-2" />
-              <div className="skeleton h-3 w-5/6 mb-3" />
-              <div className="flex gap-2">
-                <div className="skeleton h-5 w-16 rounded-full" />
-                <div className="skeleton h-5 w-20 rounded-full" />
+      {/* Main Split Layout Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {/* Left Pane (Results List) */}
+        <div className="lg:col-span-7 flex flex-col min-h-[500px]">
+          {isLoading || isFetching ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="rounded-xl border border-surface-border bg-surface p-5 space-y-3">
+                  <div className="skeleton h-5 w-2/3" />
+                  <div className="skeleton h-3 w-full" />
+                  <div className="skeleton h-3 w-5/6" />
+                  <div className="flex gap-2">
+                    <div className="skeleton h-4.5 w-16" />
+                    <div className="skeleton h-4.5 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : data && data.results.length > 0 ? (
+            <div className="space-y-3">
+              {/* Statistics row */}
+              <div className="flex items-center justify-between text-xs text-text-secondary px-1">
+                <span>{data.totalCount} result matches for &ldquo;{submittedQuery}&rdquo;</span>
+                <span className="font-mono text-text-muted">{data.queryTimeMs.toFixed(0)}ms</span>
+              </div>
+
+              {/* Cards List */}
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                {data.results.map((result, idx) => (
+                  <ResultRowCard
+                    key={`${result.documentId}-${idx}`}
+                    result={result}
+                    query={submittedQuery}
+                    isSelected={selectedResult?.documentId === result.documentId && selectedResult?.chunkContent === result.chunkContent}
+                    onSelect={() => setSelectedResult(result)}
+                  />
+                ))}
               </div>
             </div>
-          ))}
+          ) : submittedQuery ? (
+            /* Empty state results */
+            <div className="rounded-2xl border border-surface-border bg-surface p-12 text-center flex-1 flex flex-col justify-center items-center">
+              <SearchIcon size={32} className="text-text-muted mb-4" />
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">No Matches Located</h3>
+              <p className="text-xs text-text-secondary mt-2 max-w-sm leading-relaxed">
+                Could not retrieve semantic clusters. Rephrase details or confirm Drive index status.
+              </p>
+            </div>
+          ) : (
+            /* Idle landing prompt */
+            <div className="rounded-2xl border border-surface-border bg-surface p-12 text-center flex-1 flex flex-col justify-center items-center">
+              <Sparkles size={32} className="text-accent-purple mb-4 animate-pulse" />
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Awaiting Inquiry</h3>
+              <p className="text-xs text-text-secondary mt-2 max-w-xs leading-relaxed">
+                Enter queries above to scan indexed documents. We parse concepts and locate matching paragraphs instantly.
+              </p>
+            </div>
+          )}
         </div>
-      ) : data && data.results.length > 0 ? (
-        <div>
-          {/* Results count + time */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {data.totalCount} result{data.totalCount !== 1 ? 's' : ''} for &ldquo;{submittedQuery}&rdquo;
-            </span>
-            <span
-              className="text-xs"
-              style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}
-            >
-              {data.queryTimeMs.toFixed(0)}ms
-            </span>
-          </div>
 
-          {/* Result Cards */}
-          <div className="flex flex-col gap-3">
-            {data.results.map((result, idx) => (
-              <SearchResultCard key={`${result.documentId}-${idx}`} result={result} query={submittedQuery} />
-            ))}
+        {/* Right Pane (Live Preview Panel) */}
+        <div className="lg:col-span-5">
+          <div className="rounded-2xl border border-surface-border bg-surface p-6 h-full flex flex-col justify-between shadow-[0_4px_25px_rgba(0,0,0,0.3)] sticky top-6">
+            {selectedResult ? (
+              <div className="flex flex-col justify-between h-full space-y-6">
+                
+                {/* Meta details */}
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-text-secondary flex-shrink-0" />
+                      <h3 className="text-xs font-bold text-text-primary leading-snug line-clamp-2">
+                        {selectedResult.documentTitle}
+                      </h3>
+                    </div>
+
+                    <span className={`badge ${selectedResult.fileType === 'PDF' ? 'badge-failed' : 'badge-processing'} flex-shrink-0`}>
+                      {selectedResult.fileType}
+                    </span>
+                  </div>
+
+                  {/* Similarity metric gauge */}
+                  <div className="p-3 bg-background-elevated rounded-xl border border-surface-border flex items-center justify-between text-xs">
+                    <span className="text-text-secondary flex items-center gap-1">
+                      <Info size={12} className="text-text-muted" /> Matches Relevance
+                    </span>
+                    <span className="font-mono font-bold text-accent-teal">
+                      {(selectedResult.score * 100).toFixed(0)}% Score
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content reading block */}
+                <div className="flex-1 overflow-y-auto bg-background-elevated p-4 rounded-xl border border-surface-border max-h-[300px]">
+                  <p className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap font-sans">
+                    {highlightText(selectedResult.chunkContent, submittedQuery)}
+                  </p>
+                </div>
+
+                {/* Bottom detail descriptors */}
+                <div className="space-y-4 pt-4 border-t border-surface-border">
+                  <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                    <span>Target Page:</span>
+                    <span className="font-bold text-text-primary">
+                      {selectedResult.pageNumber ? `Page ${selectedResult.pageNumber}` : 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                    <span>Heading Path:</span>
+                    <span className="font-bold text-text-primary truncate max-w-[200px]">
+                      {selectedResult.headingContext || 'Top Level'}
+                    </span>
+                  </div>
+
+                  {/* Tags */}
+                  {selectedResult.tags.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
+                        Assigned Clusters
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedResult.tags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-2 py-0.5 rounded border"
+                            style={{
+                              backgroundColor: `${tag.color || '#6366f1'}08`,
+                              borderColor: `${tag.color || '#6366f1'}20`,
+                              color: tag.color || '#6366f1',
+                            }}
+                          >
+                            {tag.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions CTA */}
+                  {selectedResult.driveFileUrl && (
+                    <button
+                      onClick={() => window.open(selectedResult.driveFileUrl!, '_blank')}
+                      className="btn-google w-full justify-center py-2.5 rounded-lg border border-surface-border hover:bg-surface-hover cursor-pointer"
+                    >
+                      <span className="text-[11px] font-bold">Open File in Google Drive</span>
+                      <ExternalLink size={12} className="text-text-muted" />
+                    </button>
+                  )}
+                </div>
+
+              </div>
+            ) : (
+              /* Awaiting Selection placeholder */
+              <div className="flex-1 flex flex-col justify-center items-center text-center p-6">
+                <FileText size={28} className="text-text-muted mb-3" />
+                <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Preview Terminal</h4>
+                <p className="text-[11px] text-text-secondary mt-1.5 max-w-[200px] leading-relaxed">
+                  Select a matching segment on the left to read context parameters.
+                </p>
+              </div>
+            )}
           </div>
         </div>
-      ) : submittedQuery ? (
-        <div
-          className="rounded-xl p-8 text-center"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-surface-border)',
-          }}
-        >
-          <Search size={40} style={{ color: 'var(--color-text-muted)', margin: '0 auto 16px' }} />
-          <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>
-            No results found
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Try rephrasing your query or check that your Drive folder has indexed files.
-          </p>
-        </div>
-      ) : (
-        /* Initial empty state — tips */
-        <div className="flex flex-col items-center pt-8">
-          <Sparkles size={40} style={{ color: 'var(--color-accent-purple)', marginBottom: 16 }} />
-          <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>
-            Semantic Search
-          </h3>
-          <p
-            className="text-sm text-center max-w-md"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Search using natural language. Try questions like &ldquo;how does backpropagation work&rdquo;
-            or &ldquo;explain mutex vs semaphore&rdquo;.
-          </p>
-        </div>
-      )}
+
+      </div>
     </div>
   );
 }
 
-// ─── Search Result Card ───
+/* HELPER ROW CARD FOR SEARCH RESULTS */
 
-function SearchResultCard({ result, query }: { result: SearchResult; query: string }) {
-  const highlightText = (text: string, q: string) => {
-    if (!q) return text;
-    const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-    return parts.map((part, i) =>
-      part.toLowerCase() === q.toLowerCase() ? (
-        <mark
-          key={i}
-          style={{
-            backgroundColor: 'rgba(29, 158, 117, 0.25)',
-            color: 'var(--color-text-primary)',
-            padding: '0 2px',
-            borderRadius: '2px',
-          }}
-        >
-          {part}
-        </mark>
-      ) : (
-        part
-      )
-    );
-  };
-
-  const fileTypeBadgeColor = {
-    PDF: '#E05F5F',
-    TXT: '#5FC3E0',
-    MD: '#7F77DD',
-    IMAGE: '#BA7517',
-    VIDEO: '#1D9E75',
-    OTHER: '#888780',
-  }[result.fileType] ?? '#888780';
-
+function ResultRowCard({
+  result,
+  query,
+  isSelected,
+  onSelect,
+}: {
+  result: SearchResult;
+  query: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   return (
     <div
-      className="rounded-xl p-5 card-hover cursor-pointer"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-surface-border)',
-      }}
-      onClick={() => {
-        if (result.driveFileUrl) {
-          window.open(result.driveFileUrl, '_blank');
-        }
-      }}
+      onClick={onSelect}
+      className={`rounded-xl p-4.5 border transition-all duration-200 cursor-pointer ${
+        isSelected
+          ? 'bg-surface-hover border-accent-teal shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
+          : 'bg-surface border-surface-border hover:border-text-muted'
+      }`}
     >
-      {/* Title row */}
-      <div className="flex items-center gap-2.5 mb-2">
-        <FileText size={16} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-        <h3 className="text-sm font-semibold flex-1" style={{ color: 'var(--color-text-primary)' }}>
-          {result.documentTitle}
-        </h3>
-        <span
-          className="badge"
-          style={{
-            backgroundColor: `${fileTypeBadgeColor}15`,
-            color: fileTypeBadgeColor,
-          }}
-        >
-          {result.fileType}
+      <div className="flex items-start gap-3 justify-between mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={14} className="text-text-muted flex-shrink-0" />
+          <span className="text-xs font-bold text-text-primary truncate">
+            {result.documentTitle}
+          </span>
+        </div>
+
+        <span className="text-[10px] font-mono font-bold text-accent-teal bg-accent-teal/5 border border-accent-teal/15 px-1.5 py-0.25 rounded">
+          {(result.score * 100).toFixed(0)}%
         </span>
       </div>
 
-      {/* Chunk content with highlighting */}
-      <p
-        className="text-sm mb-3 line-clamp-3"
-        style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}
-      >
+      <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-3">
         {highlightText(result.chunkContent, query)}
       </p>
 
-      {/* Meta row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Page/heading context */}
-          {(result.pageNumber ?? result.headingContext) && (
-            <span
-              className="text-xs px-2 py-0.5 rounded"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              {result.pageNumber ? `Page ${result.pageNumber}` : ''}
-              {result.pageNumber && result.headingContext ? ' · ' : ''}
-              {result.headingContext ?? ''}
-            </span>
-          )}
-
-          {/* Tags */}
-          {result.tags.slice(0, 3).map((tag, i) => (
-            <span
-              key={i}
-              className="text-xs px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: `${tag.color}15`,
-                color: tag.color,
-              }}
-            >
-              {tag.label}
-            </span>
-          ))}
-        </div>
-
-        {/* Score bar */}
-        <div className="flex items-center gap-2">
-          <div
-            className="w-16 h-1.5 rounded-full overflow-hidden"
-            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${Math.min(100, result.score * 100)}%`,
-                background: result.score > 0.7
-                  ? 'var(--color-accent-teal)'
-                  : result.score > 0.4
-                    ? 'var(--color-accent-amber)'
-                    : 'var(--color-text-muted)',
-              }}
-            />
-          </div>
-          <span
-            className="text-xs"
-            style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}
-          >
-            {(result.score * 100).toFixed(0)}%
-          </span>
-        </div>
+      <div className="flex items-center justify-between text-[10px] text-text-muted">
+        <span>{result.pageNumber ? `Page ${result.pageNumber}` : 'Top Context'}</span>
+        <span className="truncate max-w-[150px] font-semibold">
+          {result.headingContext || 'Root Context'}
+        </span>
       </div>
     </div>
+  );
+}
+
+/* TEXT HIGHLIGHT HELPER */
+
+function highlightText(text: string, q: string) {
+  if (!q) return text;
+  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark
+        key={i}
+        className="bg-accent-teal/20 text-text-primary px-0.5 rounded"
+      >
+        {part}
+      </mark>
+    ) : (
+      part
+    )
   );
 }

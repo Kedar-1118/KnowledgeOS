@@ -10,15 +10,14 @@ import { Sidebar } from './Sidebar';
 
 export function Layout() {
   return (
-    <div className="flex min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className="flex min-h-screen dot-grid" style={{ backgroundColor: 'var(--color-background)' }}>
       <Sidebar />
 
-      {/* Main content area — offset by sidebar width */}
+      {/* Main content area */}
       <main
-        className="flex-1 ml-[240px] min-h-screen"
-        style={{ backgroundColor: 'var(--color-background)' }}
+        className="flex-1 min-h-screen min-w-0"
       >
-        <div className="p-6 max-w-[1400px] mx-auto">
+        <div className="p-8 max-w-[1400px] mx-auto">
           <Outlet />
         </div>
       </main>

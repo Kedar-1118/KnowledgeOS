@@ -1,25 +1,18 @@
 // apps/frontend/src/pages/LoginPage.tsx
 /**
  * Login page with Google OAuth button.
- *
- * Design:
- * - Dark background (#0A0A0F)
- * - Animated gradient orb (purple → teal) behind the login card
- * - Logo: brain icon + "KnowledgeOS" in Inter 600
- * - Tagline: "Your knowledge, finally searchable."
- * - Google OAuth button with hover lift effect
+ * Split-screen design: Left features custom dashboard/pipeline mockup, Right contains the auth form.
  */
 
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Brain } from 'lucide-react';
+import { Brain, Search, Sparkles, Share2, Layers } from 'lucide-react';
 
 import { useAuthStore } from '../store/authStore';
 
-/** Google "G" logo SVG for the OAuth button */
 function GoogleLogo() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
         fill="#4285F4"
@@ -46,7 +39,6 @@ export function LoginPage() {
   const { isAuthenticated } = useAuthStore();
   const error = searchParams.get('error');
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
@@ -54,131 +46,152 @@ export function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   const handleGoogleLogin = () => {
-    // Redirect to backend OAuth endpoint
     window.location.href = '/auth/google';
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ backgroundColor: 'var(--color-background)' }}
-    >
-      {/* Animated gradient orb */}
-      <div
-        className="gradient-orb"
-        style={{
-          top: '50%',
-          left: '50%',
-        }}
-      />
+    <div className="min-h-screen w-full flex bg-background dot-grid relative overflow-hidden select-none">
+      {/* Background Orbs */}
+      <div className="gradient-orb top-[20%] left-[20%]" />
+      <div className="gradient-orb bottom-[10%] right-[10%] w-[350px] h-[350px] opacity-25" />
 
-      {/* Secondary smaller orb */}
-      <div
-        className="gradient-orb"
-        style={{
-          top: '30%',
-          left: '60%',
-          width: '300px',
-          height: '300px',
-          animationDelay: '-3s',
-          opacity: 0.3,
-        }}
-      />
-
-      {/* Login card */}
-      <div
-        className="relative z-10 flex flex-col items-center animate-fade-in"
-        style={{ maxWidth: '400px', width: '100%', padding: '0 24px' }}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-3">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, rgba(127, 119, 221, 0.2), rgba(29, 158, 117, 0.2))',
-              border: '1px solid rgba(127, 119, 221, 0.2)',
-            }}
-          >
-            <Brain size={26} style={{ color: 'var(--color-accent-purple)' }} />
+      {/* Left panel: Product Preview Mock (Hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-3/5 border-r border-surface-border flex-col justify-between p-12 relative z-10">
+        {/* Top Branding Header */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-purple/10 border border-accent-purple/20 text-accent-purple shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+            <Brain size={18} className="animate-pulse" />
           </div>
-          <h1
-            className="text-3xl tracking-tight"
-            style={{
-              fontWeight: 600,
-              color: 'var(--color-text-primary)',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
+          <span className="text-sm font-bold tracking-tight text-text-primary">
             KnowledgeOS
-          </h1>
+          </span>
         </div>
 
-        {/* Tagline */}
-        <p
-          className="text-center mb-10"
-          style={{
-            color: 'var(--color-text-secondary)',
-            fontSize: '1.0625rem',
-            lineHeight: 1.5,
-          }}
-        >
-          Your knowledge, finally searchable.
-        </p>
-
-        {/* Login card container */}
-        <div
-          className="w-full rounded-2xl p-8 flex flex-col items-center"
-          style={{
-            backgroundColor: 'rgba(18, 18, 26, 0.8)',
-            border: '1px solid var(--color-surface-border)',
-            backdropFilter: 'blur(20px)',
-          }}
-        >
-          <p
-            className="text-sm mb-6 text-center"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Sign in to sync your Google Drive and unlock AI-powered knowledge management
+        {/* Dynamic visual showcase */}
+        <div className="max-w-xl">
+          <h2 className="text-4xl font-extrabold tracking-tight text-text-primary leading-tight font-sans">
+            Your personal knowledge database,<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-purple to-accent-teal">
+              finally searchable.
+            </span>
+          </h2>
+          <p className="mt-4 text-sm text-text-secondary leading-relaxed max-w-lg">
+            KnowledgeOS syncs with your Google Drive, parsing and indexing documents into a semantic database. Perform search queries, chat with your files, visualize knowledge relationships, and revise topics using spaced repetition.
           </p>
 
-          {/* Google OAuth button */}
-          <button
-            id="google-login-button"
-            onClick={handleGoogleLogin}
-            className="btn-google w-full justify-center"
-          >
-            <GoogleLogo />
-            <span>Sign in with Google</span>
-          </button>
-
-          {/* Error message */}
-          {error && (
-            <div
-              className="mt-4 px-4 py-2.5 rounded-lg text-sm w-full text-center"
-              style={{
-                backgroundColor: 'rgba(224, 95, 95, 0.1)',
-                border: '1px solid rgba(224, 95, 95, 0.2)',
-                color: 'var(--color-error)',
-              }}
-            >
-              {error === 'auth_failed'
-                ? 'Authentication failed. Please try again.'
-                : error === 'missing_code'
-                  ? 'Missing authorization code. Please try again.'
-                  : 'An error occurred. Please try again.'}
+          {/* Interactive Feature Steps Grid */}
+          <div className="mt-10 grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border border-surface-border bg-surface/50 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-teal/10 border border-accent-teal/20 text-accent-teal mb-3">
+                <Search size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-text-primary">Semantic Search</h4>
+              <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
+                Look past filename matches. Query concepts using natural language commands.
+              </p>
             </div>
-          )}
+
+            <div className="p-4 rounded-xl border border-surface-border bg-surface/50 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-purple/10 border border-accent-purple/20 text-accent-purple mb-3">
+                <Brain size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-text-primary">Contextual Q&A</h4>
+              <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
+                Ask specific questions. Extract immediate citations mapping to source files.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-surface-border bg-surface/50 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-amber/10 border border-accent-amber/20 text-accent-amber mb-3">
+                <Share2 size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-text-primary">Knowledge Graph</h4>
+              <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
+                Visualize connections between document concepts in an interactive graph.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-surface-border bg-surface/50 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-teal/10 border border-accent-teal/20 text-accent-teal mb-3">
+                <Layers size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-text-primary">Spaced Repetition</h4>
+              <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
+                Lock in knowledge long-term through optimized sm-2 practice intervals.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <p
-          className="mt-8 text-xs text-center"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          By signing in, you grant read-only access to your Google Drive.
-          <br />
-          We only read files in your KnowledgeOS/ folder.
-        </p>
+        {/* Footer info */}
+        <div>
+          <p className="text-[10px] text-text-muted tracking-wide font-medium">
+            KNOWLEDGEOS PROJECT · STAGE 1-5 COMPLETED LOGS
+          </p>
+        </div>
+      </div>
+
+      {/* Right panel: Login card centered */}
+      <div className="w-full lg:w-2/5 flex flex-col justify-between p-8 sm:p-12 relative z-10">
+        {/* Mobile top branding */}
+        <div className="flex lg:hidden items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-purple/10 border border-accent-purple/20 text-accent-purple">
+            <Brain size={18} />
+          </div>
+          <span className="text-sm font-bold tracking-tight text-text-primary">
+            KnowledgeOS
+          </span>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary font-sans">
+              Sign In
+            </h1>
+            <p className="mt-2 text-xs text-text-secondary">
+              Connect your workspace repository to begin search and indexing operations.
+            </p>
+          </div>
+
+          {/* Form */}
+          <div className="p-6 rounded-2xl border border-surface-border bg-surface/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <p className="text-xs text-text-secondary leading-relaxed mb-6">
+              Access is currently restricted to authorized Google Drive accounts. Sign in to start syncing documents.
+            </p>
+
+            <button
+              id="google-login-button"
+              onClick={handleGoogleLogin}
+              className="btn-google w-full justify-center py-3 rounded-xl hover:scale-[1.01]"
+            >
+              <GoogleLogo />
+              <span className="text-xs font-bold tracking-wide">Continue with Google</span>
+            </button>
+
+            {/* Error notifications */}
+            {error && (
+              <div className="mt-4 p-3 rounded-lg border border-error/20 bg-error/5 text-error text-xs font-semibold text-center flex items-center justify-center gap-2">
+                <span>
+                  {error === 'auth_failed'
+                    ? 'Authentication failed. Please verify credentials.'
+                    : error === 'missing_token'
+                      ? 'Session token missing. Please try signing in again.'
+                      : 'An unexpected authentication error occurred.'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer conditions */}
+        <div className="max-w-sm w-full mx-auto">
+          <p className="text-[10px] text-text-muted leading-relaxed text-center sm:text-left">
+            By signing in, you grant secure read-only folder credentials to Drive documents.
+            <br />
+            Data is parsed locally and never shared with external APIs.
+          </p>
+        </div>
       </div>
     </div>
   );
