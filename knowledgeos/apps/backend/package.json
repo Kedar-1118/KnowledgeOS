@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "lint": "eslint src/ --ext .ts",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
@@ -43,10 +44,13 @@
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/pdf-parse": "^1.1.4",
+    "@types/supertest": "^7.2.0",
     "@types/uuid": "^10.0.0",
     "eslint": "^9.16.0",
     "prisma": "^6.0.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.9"
   }
 }

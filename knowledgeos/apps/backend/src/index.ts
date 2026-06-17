@@ -119,37 +119,39 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 // ─── Server Startup ───
 
-const server = app.listen(PORT, () => {
-  logger.info(`KnowledgeOS Backend running on port ${PORT}`);
-  logger.info(`Environment: ${process.env['NODE_ENV'] ?? 'development'}`);
+if (process.env['NODE_ENV'] !== 'test') {
+  const server = app.listen(PORT, () => {
+    logger.info(`KnowledgeOS Backend running on port ${PORT}`);
+    logger.info(`Environment: ${process.env['NODE_ENV'] ?? 'development'}`);
 
-  // Initialize processing queue workers
-  initializeProcessingQueue().catch((err: unknown) => {
-    logger.error('Failed to initialize processing queue:', err);
+    // Initialize processing queue workers
+    initializeProcessingQueue().catch((err: unknown) => {
+      logger.error('Failed to initialize processing queue:', err);
+    });
+
+    // Start Drive watcher (polling every 60s)
+    startDriveWatcher().catch((err: unknown) => {
+      logger.error('Failed to start Drive watcher:', err);
+    });
   });
 
-  // Start Drive watcher (polling every 60s)
-  startDriveWatcher().catch((err: unknown) => {
-    logger.error('Failed to start Drive watcher:', err);
-  });
-});
+  // ─── Graceful Shutdown ───
 
-// ─── Graceful Shutdown ───
+  const shutdown = async (signal: string) => {
+    logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
-const shutdown = async (signal: string) => {
-  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
 
-  server.close(() => {
-    logger.info('HTTP server closed');
-  });
+    await prisma.$disconnect();
+    logger.info('Database connection closed');
 
-  await prisma.$disconnect();
-  logger.info('Database connection closed');
+    process.exit(0);
+  };
 
-  process.exit(0);
-};
-
-process.on('SIGTERM', () => void shutdown('SIGTERM'));
-process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+}
 
 export { app };
