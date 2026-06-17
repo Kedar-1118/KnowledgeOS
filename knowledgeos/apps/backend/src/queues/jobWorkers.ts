@@ -25,6 +25,7 @@ import {
   summarizeQueue,
   tagQueue,
   graphExtractQueue,
+  forceAddToQueue,
   type ParseJobData,
   type EmbedJobData,
   type SummarizeJobData,
@@ -123,7 +124,8 @@ export function registerJobWorkers(): void {
 
       // Chain to next step: EMBED
       if (parseResult.chunks.length > 0) {
-        await embedQueue.add(
+        await forceAddToQueue(
+          embedQueue,
           { documentId, userId } satisfies EmbedJobData,
           { jobId: `embed-${documentId}` },
         );
@@ -190,7 +192,8 @@ export function registerJobWorkers(): void {
       await updateJobStatus(documentId, 'EMBED', 'DONE');
 
       // Chain to next step: SUMMARIZE
-      await summarizeQueue.add(
+      await forceAddToQueue(
+        summarizeQueue,
         { documentId, userId } satisfies SummarizeJobData,
         { jobId: `summarize-${documentId}` },
       );
@@ -256,7 +259,8 @@ export function registerJobWorkers(): void {
       await updateJobStatus(documentId, 'SUMMARIZE', 'DONE');
 
       // Chain to next step: TAG
-      await tagQueue.add(
+      await forceAddToQueue(
+        tagQueue,
         { documentId, userId } satisfies TagJobData,
         { jobId: `tag-${documentId}` },
       );
@@ -340,7 +344,8 @@ export function registerJobWorkers(): void {
       await updateJobStatus(documentId, 'TAG', 'DONE');
 
       // Chain to next step: GRAPH_EXTRACT
-      await graphExtractQueue.add(
+      await forceAddToQueue(
+        graphExtractQueue,
         { documentId, userId } satisfies GraphExtractJobData,
         { jobId: `graph-extract-${documentId}` },
       );

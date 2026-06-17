@@ -92,6 +92,29 @@ export interface GraphExtractJobData {
 // ─── Enqueue Processing Pipeline ───
 
 /**
+ * Helper to add a job to a queue, removing any existing job with the same ID first.
+ * This prevents duplicate job errors in Bull where completed/failed jobs block execution.
+ */
+export async function forceAddToQueue<T>(
+  queue: Bull.Queue<T>,
+  data: T,
+  options: Bull.JobOptions,
+): Promise<Bull.Job<T>> {
+  if (options.jobId) {
+    try {
+      const existingJob = await queue.getJob(options.jobId);
+      if (existingJob) {
+        await existingJob.remove();
+        logger.debug(`Removed existing job ${options.jobId} from queue ${queue.name}`);
+      }
+    } catch (err) {
+      logger.warn(`Failed to clean up job ${options.jobId} from queue ${queue.name}:`, err);
+    }
+  }
+  return queue.add(data, options);
+}
+
+/**
  * Enqueue the full processing pipeline for a document.
  * Creates ProcessingJob records in the database and adds the first job (PARSE) to the queue.
  * Subsequent jobs are chained: each worker enqueues the next step on completion.
@@ -119,7 +142,8 @@ export async function enqueueDocumentProcessing(
   });
 
   // Enqueue the first step
-  await parseQueue.add(
+  await forceAddToQueue(
+    parseQueue,
     { documentId, userId, driveFileId } satisfies ParseJobData,
     { jobId: `parse-${documentId}` },
   );
