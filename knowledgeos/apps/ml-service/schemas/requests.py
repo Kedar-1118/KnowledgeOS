@@ -138,12 +138,22 @@ class SearchFilters(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class BM25ResultItem(BaseModel):
+    chunkId: str
+    content: str
+    score: float
+    documentId: str
+
+    model_config = {"populate_by_name": True}
+
+
 class SearchRequest(BaseModel):
     """Request to perform semantic search."""
     query: str
     user_id: str = Field(alias="userId")
     top_k: int = Field(default=10, alias="topK")
     filters: SearchFilters | None = None
+    bm25_results: list[BM25ResultItem] | None = Field(default=None, alias="bm25Results")
 
     model_config = {"populate_by_name": True}
 
@@ -158,6 +168,7 @@ class SearchResultItem(BaseModel):
     heading_context: str | None = Field(alias="headingContext", serialization_alias="headingContext")
     file_type: str = Field(alias="fileType", serialization_alias="fileType")
     tags: list[TagResult] = []
+    explanation: dict | None = Field(default=None, alias="explanation", serialization_alias="explanation")
 
     model_config = {"populate_by_name": True}
 

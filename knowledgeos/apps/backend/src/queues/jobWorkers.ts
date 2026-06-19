@@ -19,6 +19,7 @@ import { downloadDriveFile } from '../services/driveSync.js';
 import { parseFile } from '../services/fileParser.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
+import { getLLMProvider } from '../services/llm/llmProvider.js';
 import {
   parseQueue,
   embedQueue,
@@ -469,22 +470,33 @@ export function registerJobWorkers(): void {
 
       if (chunks.length === 0) return { cardsGenerated: 0 };
 
-      // Call ML service
-      const response = await axios.post(`${ML_SERVICE_URL}/ml/generate-cards`, {
-        chunks: chunks.map(c => ({ id: c.id, content: c.content })),
-        userId,
-        documentId,
-      });
-
-      const cards = response.data?.cards as Array<{
+      // Call LLM Provider to generate flashcards
+      const provider = getLLMProvider();
+      const cards: Array<{
         cardType: string;
         question: string;
         answer: string;
-        sourceChunkId: string;
-        difficultyScore: number;
-      }> | undefined;
+        sourceChunkId?: string;
+        difficultyScore?: number;
+      }> = [];
 
-      if (cards && cards.length > 0) {
+      for (const chunk of chunks) {
+        try {
+          const chunkCards = await provider.createFlashcards(chunk.content);
+          if (Array.isArray(chunkCards)) {
+            for (const c of chunkCards) {
+              cards.push({
+                ...c,
+                sourceChunkId: chunk.id,
+              });
+            }
+          }
+        } catch (e: any) {
+          logger.warn(`Failed to generate flashcards for chunk ${chunk.id}: ${e.message}`);
+        }
+      }
+
+      if (cards.length > 0) {
         // Find document title to use as topicName if not provided
         const document = await prisma.document.findUnique({
           where: { id: documentId },
@@ -526,8 +538,8 @@ export function registerJobWorkers(): void {
         }
       }
 
-      logger.info(`[GENERATE_CARDS] Finished for document ${documentId}, generated ${cards?.length || 0} cards`);
-      return { cardsGenerated: cards?.length ?? 0 };
+      logger.info(`[GENERATE_CARDS] Finished for document ${documentId}, generated ${cards.length} cards`);
+      return { cardsGenerated: cards.length };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Generate cards failed';
       logger.error(`[GENERATE_CARDS] Failed for document ${documentId}:`, errMsg);

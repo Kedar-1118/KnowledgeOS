@@ -20,6 +20,7 @@ import { chunkRouter } from './routes/chunkRoutes.js';
 import { graphRouter } from './routes/graphRoutes.js';
 import { recommendationRouter } from './routes/recommendationRoutes.js';
 import { revisionRouter } from './routes/revisionRoutes.js';
+import { llmRouter } from './routes/llmRoutes.js';
 import { initializeProcessingQueue } from './queues/processingQueue.js';
 import { startDriveWatcher } from './services/driveWatcher.js';
 import { logger } from './utils/logger.js';
@@ -104,6 +105,7 @@ app.use('/api', chunkRouter);
 app.use('/api/graph', graphRouter);
 app.use('/api/recommendations', recommendationRouter);
 app.use('/api/revision', revisionRouter);
+app.use('/api/llm', llmRouter);
 
 // ─── 404 Handler ───
 

@@ -93,6 +93,11 @@ model User {
   revisionItems    RevisionItem[]
   healthScores     KnowledgeHealthScore[]
   clusters         Cluster[]
+  spaceMembers     SpaceMember[]
+  knowledgeGaps   KnowledgeGap[]
+  roadmaps        LearningRoadmap[]
+  mentorSessions  MentorSession[]
+  bookmarks       SemanticBookmark[]
 
   @@map("users")
 }
@@ -115,11 +120,13 @@ model Document {
   readingTimeMinutes Int?
   lastAccessedAt   DateTime?
   accessCount      Int            @default(0)
+  spaceId          String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
   // Relations
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space            Space?         @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   chunks           Chunk[]
   documentTags     DocumentTag[]
   processingJobs   ProcessingJob[]
@@ -320,4 +327,144 @@ model Cluster {
 
   @@index([userId])
   @@map("clusters")
+}
+
+model Space {
+  id        String        @id @default(uuid())
+  name      String
+  type      String        // "PERSONAL" | "TEAM" | "ORGANIZATION"
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  members   SpaceMember[]
+  documents Document[]
+  roadmaps  LearningRoadmap[]
+
+  @@map("spaces")
+}
+
+model SpaceMember {
+  id        String   @id @default(uuid())
+  spaceId   String
+  userId    String
+  role      String   // "OWNER" | "ADMIN" | "MEMBER"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, userId])
+  @@map("space_members")
+}
+
+model KnowledgeGap {
+  id          String   @id @default(uuid())
+  userId      String
+  topic       String
+  confidence  Float
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("knowledge_gaps")
+}
+
+model LearningRoadmap {
+  id        String        @id @default(uuid())
+  userId    String
+  title     String
+  spaceId   String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space     Space?        @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  nodes     RoadmapNode[]
+
+  @@index([userId])
+  @@map("learning_roadmaps")
+}
+
+model RoadmapNode {
+  id           String        @id @default(uuid())
+  roadmapId    String
+  label        String
+  type         String        // "CORE" | "ELECTIVE" | "ADVANCED"
+  status       String        // "PLANNED" | "IN_PROGRESS" | "COMPLETED"
+  parentNodeId String?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  roadmap      LearningRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  parent       RoadmapNode?    @relation("RoadmapNodeHierarchy", fields: [parentNodeId], references: [id], onDelete: Cascade)
+  children     RoadmapNode[]   @relation("RoadmapNodeHierarchy")
+
+  @@index([roadmapId])
+  @@map("roadmap_nodes")
+}
+
+model DocumentConversation {
+  id          String   @id @default(uuid())
+  documentId  String
+  userId      String
+  history     Json     @default("[]")    // Array of message objects
+  insights    Json     @default("[]")    // Array of extracted insights
+  followUps   Json     @default("[]")    // Array of follow-up questions
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([documentId, userId])
+  @@map("document_conversations")
+}
+
+model MentorSession {
+  id          String           @id @default(uuid())
+  userId      String
+  topic       String
+  status      String           // "ACTIVE" | "COMPLETED"
+  difficulty  String           // "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
+  roadmap     Json             @default("[]") // Generated course syllabus
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress    MentorProgress[]
+
+  @@index([userId])
+  @@map("mentor_sessions")
+}
+
+model MentorProgress {
+  id              String        @id @default(uuid())
+  mentorSessionId String
+  nodeId          String        // ID matching the node in syllabus roadmap
+  masteryScore    Float         @default(0.0) // 0 to 1
+  quizzes         Json          @default("[]")
+  assignments     Json          @default("[]")
+  weakAreas       Json          @default("[]")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  mentorSession   MentorSession @relation(fields: [mentorSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorSessionId, nodeId])
+  @@map("mentor_progress")
+}
+
+model SemanticBookmark {
+  id                String   @id @default(uuid())
+  userId            String
+  concept           String
+  notes             String?
+  relatedDocumentIds Json     @default("[]") // Array of document IDs
+  relatedEntities   Json     @default("[]") // Array of concept names
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, concept])
+  @@map("semantic_bookmarks")
 }

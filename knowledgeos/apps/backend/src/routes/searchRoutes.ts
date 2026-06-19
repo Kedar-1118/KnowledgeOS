@@ -48,12 +48,42 @@ searchRouter.post('/search', async (req: Request, res: Response) => {
       return;
     }
 
-    // Forward to ML service
+    // Run PostgreSQL full-text search to get BM25 candidates
+    let bm25Results: Array<{ chunkId: string; content: string; score: number; documentId: string }> = [];
+    try {
+      const dbCandidates = await prisma.$queryRaw<Array<{
+        id: string;
+        documentId: string;
+        content: string;
+        rank: number;
+      }>>`
+        SELECT id, "documentId", content, ts_rank_cd(to_tsvector('english', content), websearch_to_tsquery('english', ${query})) as rank
+        FROM chunks
+        WHERE "documentId" IN (
+          SELECT id FROM documents WHERE "userId" = ${req.user.id} AND status = 'INDEXED'
+        )
+        AND to_tsvector('english', content) @@ websearch_to_tsquery('english', ${query})
+        ORDER BY rank DESC
+        LIMIT 50
+      `;
+
+      bm25Results = (dbCandidates || []).map(c => ({
+        chunkId: c.id,
+        content: c.content,
+        score: Number(c.rank || 0.0),
+        documentId: c.documentId,
+      }));
+    } catch (err) {
+      logger.warn('Postgres full-text search failed (falling back to vector search only):', err);
+    }
+
+    // Forward to ML service with BM25 candidates
     const mlResponse = await axios.post(`${ML_SERVICE_URL}/ml/search`, {
       query,
       userId: req.user.id,
       topK: topK ?? 10,
       filters,
+      bm25Results,
     });
 
     const searchData = mlResponse.data as {
