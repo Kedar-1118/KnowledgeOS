@@ -40,6 +40,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', {
+  skip: (req) => req.url === '/health' || req.url === '/api/drive/status',
   stream: { write: (message: string) => logger.info(message.trim()) },
 }));
 

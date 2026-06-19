@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { getAuthUrl, handleGoogleCallback } from './googleAuth.js';
 import { jwtMiddleware } from './jwtMiddleware.js';
 import { logger } from '../utils/logger.js';
+import { prisma } from '../utils/prisma.js';
 
 export const authRouter = Router();
 
@@ -82,4 +83,45 @@ authRouter.get('/me', jwtMiddleware, (req: Request, res: Response) => {
     success: true,
     data: req.user,
   });
+});
+
+/**
+ * PUT /auth/me
+ * Updates the currently authenticated user's profile and preferences.
+ */
+authRouter.put('/me', jwtMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+
+    const { name, preferences } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name: name || undefined,
+        preferences: preferences ?? undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        preferences: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updatedUser,
+    });
+  } catch (error) {
+    logger.error('Update profile settings failed:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'UPDATE_SETTINGS_FAILED', message: error instanceof Error ? error.message : 'Failed to update settings' },
+    });
+  }
 });

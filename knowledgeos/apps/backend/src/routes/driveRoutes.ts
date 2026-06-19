@@ -87,7 +87,7 @@ driveRouter.post('/upload/init', async (req: Request, res: Response) => {
       media: { mimeType },
       fields: 'id',
     }, {
-      options: { url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable' }
+      url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable'
     });
 
     res.json({

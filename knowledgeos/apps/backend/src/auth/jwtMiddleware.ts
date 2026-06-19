@@ -29,6 +29,7 @@ declare global {
         email: string;
         name: string;
         avatarUrl: string | null;
+        preferences?: any;
       };
     }
   }
@@ -69,6 +70,7 @@ export async function jwtMiddleware(
         email: true,
         name: true,
         avatarUrl: true,
+        preferences: true,
       },
     });
 

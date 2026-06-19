@@ -9,7 +9,7 @@ const items = [
   { to: '/search', label: 'Search', icon: 'search' },
   { to: '/ask', label: 'Q&A', icon: 'smart_toy' },
   { to: '/graph', label: 'Graph', icon: 'hub' },
-  { to: '/recommendations', label: 'Recommendations', icon: 'sparkles' },
+  { to: '/recommendations', label: 'Recommendations', icon: 'recommend' },
   { to: '/revision', label: 'Revision', icon: 'psychology' }
 ]
 
@@ -44,7 +44,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto px-md pt-lg border-t border-outline-variant/30 flex flex-col gap-xs">
-        <button 
+        <button
           onClick={openUpload}
           className="bg-primary text-on-primary py-sm rounded px-md mb-md hover:brightness-110 transition-all flex items-center justify-center gap-2 text-xs font-bold cursor-pointer"
         >
@@ -77,7 +77,7 @@ export default function Sidebar() {
               <span className="text-[9px] text-on-surface-variant truncate">{user?.email ?? 'alex@enterprise.ai'}</span>
             </div>
           </div>
-          <button onClick={logout} className="p-1 rounded-lg hover:text-error hover:bg-error/10 text-on-surface-variant transition-colors">Logout</button>
+          <button onClick={logout} className="hidden hover:block p-1 rounded-lg hover:text-error hover:bg-error/10 text-xs font-semibold cursor-pointer transition-colors">Logout</button>
         </div>
       </div>
     </aside>

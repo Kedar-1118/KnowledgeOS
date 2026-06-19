@@ -247,7 +247,7 @@ revisionRouter.post('/generate/:documentId', async (req: Request, res: Response)
 
     // Verify document belongs to user
     const document = await prisma.document.findFirst({
-      where: { id: documentId, userId: req.user.id },
+      where: { id: documentId as string, userId: req.user.id as string },
     });
 
     if (!document) {

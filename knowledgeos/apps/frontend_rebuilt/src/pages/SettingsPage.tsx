@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useAuthStore } from '../store/authStore'
@@ -15,16 +15,87 @@ interface SyncStatus {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'profile' | 'drive' | 'prefs'>('profile')
 
   // UI preferences toggles
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [bio, setBio] = useState('')
+
   const [reminders, setReminders] = useState(true)
   const [autoSync, setAutoSync] = useState(true)
   const [compact, setCompact] = useState(false)
   const [soundFeedback, setSoundFeedback] = useState(false)
   const [ocrExtraction, setOcrExtraction] = useState(false)
   const [syncInterval, setSyncInterval] = useState(15)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Synchronize state from active user object
+  useEffect(() => {
+    if (user) {
+      const parts = user.name.split(' ')
+      setFirstName(parts[0] || '')
+      setLastName(parts.slice(1).join(' ') || '')
+      
+      const prefs = (user as any).preferences || {}
+      setBio(prefs.bio || '')
+      setReminders(prefs.reminders !== false)
+      setAutoSync(prefs.autoSync !== false)
+      setCompact(!!prefs.compact)
+      setSoundFeedback(!!prefs.soundFeedback)
+      setOcrExtraction(!!prefs.ocrExtraction)
+      setSyncInterval(prefs.syncInterval || 15)
+    }
+  }, [user])
+
+  // Save settings updates
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const res = await api.put<{ success: boolean; data: any }>('/auth/me', {
+        name: `${firstName} ${lastName}`.trim(),
+        preferences: {
+          bio,
+          reminders,
+          autoSync,
+          compact,
+          soundFeedback,
+          ocrExtraction,
+          syncInterval
+        }
+      })
+      if (res.data.success && res.data.data) {
+        setUser(res.data.data)
+        alert('Settings saved successfully!')
+      } else {
+        alert('Failed to save settings.')
+      }
+    } catch (err: any) {
+      console.error(err)
+      alert(`Error saving settings: ${err.message || 'Unknown error'}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Discard local inputs
+  const handleDiscard = () => {
+    if (user) {
+      const parts = user.name.split(' ')
+      setFirstName(parts[0] || '')
+      setLastName(parts.slice(1).join(' ') || '')
+      
+      const prefs = (user as any).preferences || {}
+      setBio(prefs.bio || '')
+      setReminders(prefs.reminders !== false)
+      setAutoSync(prefs.autoSync !== false)
+      setCompact(!!prefs.compact)
+      setSoundFeedback(!!prefs.soundFeedback)
+      setOcrExtraction(!!prefs.ocrExtraction)
+      setSyncInterval(prefs.syncInterval || 15)
+    }
+  }
 
   // Query: Drive sync status
   const { data: syncStatus } = useQuery<SyncStatus>({
@@ -118,7 +189,8 @@ export default function SettingsPage() {
                   <input
                     className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all text-xs"
                     type="text"
-                    defaultValue={user?.name?.split(' ')[0] || 'Julian'}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-xs">
@@ -126,7 +198,8 @@ export default function SettingsPage() {
                   <input
                     className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all text-xs"
                     type="text"
-                    defaultValue={user?.name?.split(' ').slice(1).join(' ') || 'Sterling'}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                   />
                 </div>
                 <div className="col-span-2 flex flex-col gap-xs">
@@ -134,7 +207,8 @@ export default function SettingsPage() {
                   <textarea
                     className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-sm text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none text-xs"
                     rows={3}
-                    defaultValue="Senior Solutions Architect specializing in LLM knowledge integration and enterprise vector databases."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
                   />
                 </div>
               </div>
@@ -354,16 +428,17 @@ export default function SettingsPage() {
       {/* Action Footer */}
       <div className="mt-2xl flex justify-end gap-md pt-xl border-t border-outline-variant/20">
         <button
-          onClick={() => setActiveTab('profile')}
+          onClick={handleDiscard}
           className="px-xl py-2 rounded-lg font-label-sm text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs font-bold"
         >
           Discard Changes
         </button>
         <button
-          onClick={() => alert('Settings Saved Successfully!')}
-          className="px-xl py-2 rounded-lg font-label-sm bg-primary text-on-primary shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer text-xs font-bold"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="px-xl py-2 rounded-lg font-label-sm bg-primary text-on-primary shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer text-xs font-bold disabled:opacity-50"
         >
-          Save Workspace
+          {isSaving ? 'Saving...' : 'Save Workspace'}
         </button>
       </div>
     </div>
