@@ -1,6 +1,7 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useUploadStore } from '../store/uploadStore'
 
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -15,6 +16,7 @@ const items = [
 export default function Sidebar() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
+  const { openUpload } = useUploadStore()
 
   return (
     <aside className="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50 select-none">
@@ -29,10 +31,9 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-md px-4 py-2 transition-transform active:scale-[0.98] ${
-                isActive
-                  ? 'bg-white/5 border-l-2 border-primary text-primary font-medium'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+              `flex items-center gap-md px-4 py-2 transition-transform active:scale-[0.98] ${isActive
+                ? 'bg-white/5 border-l-2 border-primary text-primary font-medium'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
               }`
             }
           >
@@ -43,14 +44,19 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto px-md pt-lg border-t border-outline-variant/30 flex flex-col gap-xs">
-        <button className="bg-primary text-on-primary py-sm rounded px-md mb-md hover:brightness-110 transition-all flex items-center justify-center gap-2 text-xs font-bold">New Ingestion</button>
+        <button 
+          onClick={openUpload}
+          className="bg-primary text-on-primary py-sm rounded px-md mb-md hover:brightness-110 transition-all flex items-center justify-center gap-2 text-xs font-bold cursor-pointer"
+        >
+          New Ingestion
+        </button>
 
-        <NavLink to="/status" className={({isActive}) => `flex items-center gap-md px-4 py-2 ${isActive ? 'bg-white/5 border-l-2 border-primary text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'}`}>
+        <NavLink to="/status" className={({ isActive }) => `flex items-center gap-md px-4 py-2 ${isActive ? 'bg-white/5 border-l-2 border-primary text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'}`}>
           <span className="material-symbols-outlined text-[20px]">sensors</span>
           <span className="text-xs font-semibold">Status</span>
         </NavLink>
 
-        <NavLink to="/settings" className={({isActive}) => `flex items-center gap-md px-4 py-2 ${isActive ? 'bg-white/5 border-l-2 border-primary text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'}`}>
+        <NavLink to="/settings" className={({ isActive }) => `flex items-center gap-md px-4 py-2 ${isActive ? 'bg-white/5 border-l-2 border-primary text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'}`}>
           <span className="material-symbols-outlined text-[20px]">settings</span>
           <span className="text-xs font-semibold">Settings</span>
         </NavLink>
