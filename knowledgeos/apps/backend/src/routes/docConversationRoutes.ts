@@ -23,14 +23,27 @@ docConversationRouter.get('/:id/conversation', async (req: Request, res: Respons
     const documentId = req.params['id'] as string;
     const userId = (req.user as any).id as string;
 
-    // Verify document ownership
-    const document = await prisma.document.findFirst({
-      where: { id: documentId, userId },
-      select: { id: true, title: true, summary: true }
+    // Verify document ownership or space membership
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { id: true, title: true, summary: true, userId: true, spaceId: true }
     });
 
     if (!document) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found' } });
+      return;
+    }
+
+    let hasAccess = document.userId === userId;
+    if (!hasAccess && document.spaceId) {
+      const membership = await prisma.spaceMember.findFirst({
+        where: { spaceId: document.spaceId, userId }
+      });
+      hasAccess = !!membership;
+    }
+
+    if (!hasAccess) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this document' } });
       return;
     }
 
@@ -77,14 +90,27 @@ docConversationRouter.post('/:id/chat', async (req: Request, res: Response) => {
       return;
     }
 
-    // Verify document
-    const document = await prisma.document.findFirst({
-      where: { id: documentId, userId },
-      select: { id: true, title: true, summary: true }
+    // Verify document ownership or space membership
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { id: true, title: true, summary: true, userId: true, spaceId: true }
     });
 
     if (!document) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found' } });
+      return;
+    }
+
+    let hasAccess = document.userId === userId;
+    if (!hasAccess && document.spaceId) {
+      const membership = await prisma.spaceMember.findFirst({
+        where: { spaceId: document.spaceId, userId }
+      });
+      hasAccess = !!membership;
+    }
+
+    if (!hasAccess) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this document' } });
       return;
     }
 

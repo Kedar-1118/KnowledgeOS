@@ -13,6 +13,7 @@
 
 import { google, type drive_v3 } from 'googleapis';
 import type { FileType } from '@prisma/client';
+import axios from 'axios';
 
 import { createOAuth2Client, refreshDriveToken } from '../auth/googleAuth.js';
 import { logger } from '../utils/logger.js';
@@ -291,6 +292,31 @@ export async function syncDriveFolder(userId: string): Promise<SyncResult> {
         const errorMsg = `Failed to process file ${file.name}: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`;
         result.errors.push(errorMsg);
         logger.error(errorMsg);
+      }
+    }
+
+    // Clean up documents deleted in Google Drive
+    const driveFileIdSet = new Set(driveFiles.map(f => f.id).filter(Boolean));
+    const deletedDocs = await prisma.document.findMany({
+      where: {
+        userId,
+        driveFileId: { notIn: Array.from(driveFileIdSet) as string[] },
+      },
+      select: { id: true, title: true },
+    });
+
+    for (const doc of deletedDocs) {
+      try {
+        await prisma.document.delete({ where: { id: doc.id } });
+
+        const mlUrl = process.env['ML_SERVICE_URL'] ?? 'http://localhost:8000';
+        await axios.post(`${mlUrl}/ml/delete-document`, {
+          documentId: doc.id,
+          userId,
+        });
+        logger.info(`Deleted document ${doc.title} (${doc.id}) because it was deleted from Drive`);
+      } catch (err: any) {
+        logger.error(`Failed to clean up deleted document ${doc.id} from Drive sync: ${err.message}`);
       }
     }
 

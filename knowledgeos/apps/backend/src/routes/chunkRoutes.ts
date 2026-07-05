@@ -29,18 +29,34 @@ chunkRouter.get('/documents/:id/chunks', async (req: Request, res: Response) => 
       return;
     }
 
-    // Verify document belongs to user
+    // Verify document belongs to user or is in user's shared space
     const docId = req.params['id'] as string;
 
-    const document = await prisma.document.findFirst({
-      where: { id: docId, userId: req.user.id },
-      select: { id: true, title: true },
+    const document = await prisma.document.findUnique({
+      where: { id: docId },
+      select: { id: true, title: true, userId: true, spaceId: true },
     });
 
     if (!document) {
       res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Document not found' },
+      });
+      return;
+    }
+
+    let hasAccess = document.userId === req.user.id;
+    if (!hasAccess && document.spaceId) {
+      const membership = await prisma.spaceMember.findFirst({
+        where: { spaceId: document.spaceId, userId: req.user.id },
+      });
+      hasAccess = !!membership;
+    }
+
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this document' },
       });
       return;
     }

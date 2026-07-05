@@ -171,6 +171,16 @@ spaceRouter.post('/:id/documents', async (req: Request, res: Response) => {
       return;
     }
 
+    if (spaceId !== 'personal') {
+      const membership = await prisma.spaceMember.findFirst({
+        where: { spaceId, userId: req.user.id }
+      });
+      if (!membership) {
+        res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You do not belong to this space' } });
+        return;
+      }
+    }
+
     // Update document spaceId
     const updatedDoc = await prisma.document.update({
       where: { id: documentId },
