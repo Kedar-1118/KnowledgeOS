@@ -63,12 +63,14 @@ roadmapRouter.post('/', async (req: Request, res: Response) => {
     // 3. Update nodes with parent links
     for (const node of nodes) {
       if (node.parentLabel && nodeMap.has(node.parentLabel)) {
-        const childId = nodeMap.get(node.label)!;
-        const parentId = nodeMap.get(node.parentLabel)!;
-        await prisma.roadmapNode.update({
-          where: { id: childId },
-          data: { parentNodeId: parentId },
-        });
+        const childId = nodeMap.get(node.label);
+        const parentId = nodeMap.get(node.parentLabel);
+        if (childId && parentId) {
+          await prisma.roadmapNode.update({
+            where: { id: childId },
+            data: { parentNodeId: parentId },
+          });
+        }
       }
     }
 

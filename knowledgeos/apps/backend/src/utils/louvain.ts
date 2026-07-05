@@ -87,7 +87,8 @@ export async function computeGraphClusters(userId: string): Promise<void> {
         const commWeights = new Map<string, number>();
 
         for (const edge of neighbors) {
-          const nComm = communities.get(edge.target)!;
+          const nComm = communities.get(edge.target);
+          if (nComm === undefined) continue;
           commWeights.set(nComm, (commWeights.get(nComm) || 0.0) + edge.weight);
         }
 
