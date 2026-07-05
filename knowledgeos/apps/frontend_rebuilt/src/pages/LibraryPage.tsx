@@ -51,6 +51,64 @@ export default function LibraryPage() {
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
+  // Document Chat states
+  const [inspectorTab, setInspectorTab] = useState<'info' | 'chat'>('info')
+  const [chatMessage, setChatMessage] = useState('')
+  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([])
+  const [chatInsights, setChatInsights] = useState<string[]>([])
+  const [chatFollowUps, setChatFollowUps] = useState<string[]>([])
+  const [isSendingChat, setIsSendingChat] = useState(false)
+
+  // Reset tab when doc changes
+  React.useEffect(() => {
+    setInspectorTab('info')
+    setChatHistory([])
+    setChatInsights([])
+    setChatFollowUps([])
+  }, [selectedDoc])
+
+  // Fetch conversation details when tab is chat
+  React.useEffect(() => {
+    if (selectedDoc && inspectorTab === 'chat') {
+      fetchConversation(selectedDoc.id)
+    }
+  }, [selectedDoc, inspectorTab])
+
+  const fetchConversation = async (docId: string) => {
+    try {
+      const res = await api.get<{ success: boolean; data: any }>(`/api/documents/${docId}/conversation`)
+      if (res.data.success) {
+        setChatHistory(res.data.data.history || [])
+        setChatInsights(res.data.data.insights || [])
+        setChatFollowUps(res.data.data.followUps || [])
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleSendChat = async (messageText: string) => {
+    if (!selectedDoc || !messageText.trim() || isSendingChat) return
+    setIsSendingChat(true)
+    const newMsg = { role: 'user', content: messageText }
+    setChatHistory(prev => [...prev, newMsg])
+    setChatMessage('')
+    try {
+      const res = await api.post<{ success: boolean; data: any }>(`/api/documents/${selectedDoc.id}/chat`, {
+        message: messageText
+      })
+      if (res.data.success) {
+        setChatHistory(res.data.data.history || [])
+        setChatInsights(res.data.data.insights || [])
+        setChatFollowUps(res.data.data.followUps || [])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSendingChat(false)
+    }
+  }
+
   // Query: Fetch Documents
   const { data, isLoading } = useQuery<ListResponse>({
     queryKey: ['documents', page, search, statusFilter, formatFilter],
@@ -388,74 +446,168 @@ export default function LibraryPage() {
                 </button>
               </div>
 
-              {/* Visual preview slot */}
-              <div className="w-full aspect-video rounded-lg mb-xl relative overflow-hidden group border border-white/5 bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-5xl opacity-40">find_in_page</span>
-                {selectedDoc.driveFileUrl && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-surface/60 backdrop-blur-sm transition-opacity">
-                    <button 
-                      onClick={() => window.open(selectedDoc.driveFileUrl!, '_blank')}
-                      className="bg-white text-black px-4 py-2 rounded-full font-bold text-xs cursor-pointer"
-                    >
-                      Open in Drive
-                    </button>
-                  </div>
-                )}
+              {/* Tab Header */}
+              <div className="flex border-b border-outline-variant/30 mb-md gap-md">
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab('info')}
+                  className={`pb-xs text-[11px] font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-colors ${
+                    inspectorTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Info
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab('chat')}
+                  className={`pb-xs text-[11px] font-bold uppercase tracking-wider border-b-2 cursor-pointer transition-colors ${
+                    inspectorTab === 'chat' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Chat & Insights
+                </button>
               </div>
 
-              {/* Summary */}
-              <div className="mb-xl">
-                <div className="flex items-center gap-2 mb-sm text-primary">
-                  <span className="material-symbols-outlined text-[20px]">smart_toy</span>
-                  <span className="font-bold text-xs tracking-wide uppercase">AI ABSTRACT SUMMARY</span>
-                </div>
-                <div className="glass-panel p-4 rounded-lg text-xs leading-relaxed text-on-surface-variant max-h-48 overflow-y-auto whitespace-pre-wrap">
-                  {selectedDoc.summary || 'Parsing file text... Summary pending.'}
-                </div>
-              </div>
-
-              {/* Categorization */}
-              {selectedDoc.tags && selectedDoc.tags.length > 0 && (
-                <div className="mb-xl">
-                  <div className="flex items-center gap-2 mb-sm text-secondary">
-                    <span className="material-symbols-outlined text-[20px]">label</span>
-                    <span className="font-bold text-xs tracking-wide uppercase">CATEGORIZATION</span>
+              {inspectorTab === 'info' ? (
+                <>
+                  {/* Visual preview slot */}
+                  <div className="w-full aspect-video rounded-lg mb-xl relative overflow-hidden group border border-white/5 bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary text-5xl opacity-40">find_in_page</span>
+                    {selectedDoc.driveFileUrl && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-surface/60 backdrop-blur-sm transition-opacity">
+                        <button 
+                          onClick={() => window.open(selectedDoc.driveFileUrl!, '_blank')}
+                          className="bg-white text-black px-4 py-2 rounded-full font-bold text-xs cursor-pointer"
+                        >
+                          Open in Drive
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDoc.tags.map((tag) => (
-                      <span 
-                        key={tag.id}
-                        className="px-2.5 py-0.75 rounded bg-surface-container-high border border-outline-variant/30 text-[10px] font-mono font-bold"
-                        style={{ color: tag.color || '#c3c0ff' }}
-                      >
-                        {tag.name.toUpperCase()}
-                      </span>
+
+                  {/* Summary */}
+                  <div className="mb-xl">
+                    <div className="flex items-center gap-2 mb-sm text-primary">
+                      <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+                      <span className="font-bold text-xs tracking-wide uppercase">AI ABSTRACT SUMMARY</span>
+                    </div>
+                    <div className="glass-panel p-4 rounded-lg text-xs leading-relaxed text-on-surface-variant max-h-48 overflow-y-auto whitespace-pre-wrap">
+                      {selectedDoc.summary || 'Parsing file text... Summary pending.'}
+                    </div>
+                  </div>
+
+                  {/* Categorization */}
+                  {selectedDoc.tags && selectedDoc.tags.length > 0 && (
+                    <div className="mb-xl">
+                      <div className="flex items-center gap-2 mb-sm text-secondary">
+                        <span className="material-symbols-outlined text-[20px]">label</span>
+                        <span className="font-bold text-xs tracking-wide uppercase">CATEGORIZATION</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedDoc.tags.map((tag) => (
+                          <span 
+                            key={tag.id}
+                            className="px-2.5 py-0.75 rounded bg-surface-container-high border border-outline-variant/30 text-[10px] font-mono font-bold"
+                            style={{ color: tag.color || '#c3c0ff' }}
+                          >
+                            {tag.name.toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metrics */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-sm text-tertiary">
+                      <span className="material-symbols-outlined text-[20px]">analytics</span>
+                      <span className="font-bold text-xs tracking-wide uppercase">INDEXING METRICS</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="glass-panel p-3 rounded-lg">
+                        <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Read Time</p>
+                        <p className="font-code text-base text-primary font-bold">{selectedDoc.readingTimeMinutes ? `${selectedDoc.readingTimeMinutes}m` : 'N/A'}</p>
+                      </div>
+                      <div className="glass-panel p-3 rounded-lg">
+                        <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Access Count</p>
+                        <p className="font-code text-base text-secondary font-bold">{selectedDoc.accessCount} clicks</p>
+                      </div>
+                      <div className="glass-panel p-3 rounded-lg col-span-2">
+                        <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest font-mono">Index Identifier</p>
+                        <p className="font-code text-[10px] text-on-surface truncate font-mono">{selectedDoc.id}</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-md flex flex-col h-[400px] justify-between">
+                  {/* Chat logs */}
+                  <div className="flex-1 overflow-y-auto space-y-sm bg-black/10 border border-white/5 rounded-xl p-sm max-h-[220px]">
+                    {chatHistory.map((msg, idx) => (
+                      <div key={idx} className={`p-xs rounded-lg text-xs leading-relaxed max-w-[85%] ${
+                        msg.role === 'user'
+                          ? 'bg-primary/20 text-white ml-auto'
+                          : 'bg-white/5 text-slate-300 mr-auto'
+                      }`}>
+                        {msg.content}
+                      </div>
                     ))}
+                    {chatHistory.length === 0 && (
+                      <p className="text-slate-500 italic text-[11px] text-center py-8">Ask your first question about this document!</p>
+                    )}
+                  </div>
+
+                  {/* Insights if any */}
+                  {chatInsights.length > 0 && (
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-sm">
+                      <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Key Insights Learned</h4>
+                      <ul className="list-disc list-inside text-[10px] text-slate-300 space-y-0.5 leading-relaxed">
+                        {chatInsights.map((insight, idx) => (
+                          <li key={idx} className="truncate" title={insight}>{insight}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Followups chips */}
+                  {chatFollowUps.length > 0 && (
+                    <div className="flex flex-wrap gap-xs">
+                      {chatFollowUps.map((q, idx) => (
+                        <button
+                          type="button"
+                          key={idx}
+                          onClick={() => handleSendChat(q)}
+                          className="bg-white/5 hover:bg-white/10 border border-white/10 rounded px-sm py-0.5 text-[9px] font-semibold text-slate-300 truncate max-w-full cursor-pointer text-left"
+                          title={q}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Message Input */}
+                  <div className="flex gap-sm items-center mt-auto border-t border-white/5 pt-sm">
+                    <input
+                      type="text"
+                      placeholder="Ask the AI Tutor..."
+                      value={chatMessage}
+                      onChange={e => setChatMessage(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSendChat(chatMessage) }}
+                      className="flex-1 bg-white/5 border border-white/10 rounded px-sm py-xs text-xs focus:outline-none focus:border-primary/50 text-white"
+                      disabled={isSendingChat}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSendChat(chatMessage)}
+                      disabled={isSendingChat || !chatMessage.trim()}
+                      className="bg-primary text-on-primary p-1.5 rounded-lg flex items-center justify-center hover:brightness-110 disabled:opacity-50 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-xs">send</span>
+                    </button>
                   </div>
                 </div>
               )}
-
-              {/* Metrics */}
-              <div>
-                <div className="flex items-center gap-2 mb-sm text-tertiary">
-                  <span className="material-symbols-outlined text-[20px]">analytics</span>
-                  <span className="font-bold text-xs tracking-wide uppercase">INDEXING METRICS</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="glass-panel p-3 rounded-lg">
-                    <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Read Time</p>
-                    <p className="font-code text-base text-primary font-bold">{selectedDoc.readingTimeMinutes ? `${selectedDoc.readingTimeMinutes}m` : 'N/A'}</p>
-                  </div>
-                  <div className="glass-panel p-3 rounded-lg">
-                    <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest">Access Count</p>
-                    <p className="font-code text-base text-secondary font-bold">{selectedDoc.accessCount} clicks</p>
-                  </div>
-                  <div className="glass-panel p-3 rounded-lg col-span-2">
-                    <p className="text-[9px] text-on-surface-variant mb-1 uppercase font-bold tracking-widest font-mono">Index Identifier</p>
-                    <p className="font-code text-[10px] text-on-surface truncate font-mono">{selectedDoc.id}</p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="pt-lg border-t border-outline-variant flex gap-3">
