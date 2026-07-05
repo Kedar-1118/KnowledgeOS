@@ -117,6 +117,8 @@ describe('API Router Integration Tests', () => {
           type: 'TECHNOLOGY',
           description: 'Containerization tool',
           size: 1,
+          clusterLabel: 'Entity',
+          color: '#c3c0ff',
         });
         expect(res.body.data.nodes[1]).toEqual({
           id: 'd1',
@@ -124,6 +126,8 @@ describe('API Router Integration Tests', () => {
           type: 'OTHER',
           description: 'Docker is cool',
           size: 2,
+          clusterLabel: 'General',
+          color: '#999',
         });
       });
     });
