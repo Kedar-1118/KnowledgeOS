@@ -102,6 +102,7 @@ describe('API Router Integration Tests', () => {
         prismaMock.document.findMany.mockResolvedValueOnce([
           { id: 'd1', title: 'Getting Started with Docker', summary: 'Docker is cool' },
         ]);
+        prismaMock.cluster.findMany.mockResolvedValueOnce([]);
 
         const res = await request(app)
           .get('/api/graph/nodes')
