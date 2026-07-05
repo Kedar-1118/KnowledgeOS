@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 
 interface GraphNode {
@@ -44,10 +44,24 @@ export default function GraphPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const simLoopRef = useRef<number>(0)
+  const queryClient = useQueryClient()
 
+  const [isClustering, setIsClustering] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
+
+  const handleRecluster = async () => {
+    setIsClustering(true)
+    try {
+      await api.post('/api/graph/cluster')
+      void queryClient.invalidateQueries({ queryKey: ['graph-nodes'] })
+    } catch (e) {
+      console.error('Clustering failed:', e)
+    } finally {
+      setIsClustering(false)
+    }
+  }
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -464,10 +478,21 @@ export default function GraphPage() {
 
       {/* Sidebar Metrics Summary Panel */}
       <div className="absolute top-lg right-lg w-72 glass-panel rounded-2xl p-lg z-40 hidden xl:block text-xs">
-        <div className="flex items-center justify-between mb-lg border-b border-outline-variant/30 pb-3">
+        <div className="flex items-center justify-between mb-sm border-b border-outline-variant/30 pb-3">
           <h4 className="font-headline-lg text-sm font-semibold">Network Stats</h4>
           <span className="material-symbols-outlined text-outline">info</span>
         </div>
+
+        <button
+          type="button"
+          onClick={handleRecluster}
+          disabled={isClustering}
+          className="w-full bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary py-1.5 rounded-lg text-[10px] font-bold hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer mb-md transition-all"
+        >
+          <span className="material-symbols-outlined text-xs">hub</span>
+          {isClustering ? 'Computing clusters...' : 'Run Louvain Clustering'}
+        </button>
+
         <div className="space-y-4">
           <div>
             <div className="flex justify-between text-[10px] mb-xs font-bold text-on-surface-variant uppercase tracking-wider">
