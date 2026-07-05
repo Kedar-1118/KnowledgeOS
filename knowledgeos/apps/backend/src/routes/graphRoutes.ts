@@ -12,9 +12,30 @@ import { jwtMiddleware } from '../auth/jwtMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
 
+import { computeGraphClusters } from '../utils/louvain.js';
+
 export const graphRouter = Router();
 
 graphRouter.use(jwtMiddleware);
+
+/**
+ * POST /api/graph/cluster
+ * Run Louvain community detection on the document relation network.
+ */
+graphRouter.post('/cluster', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+
+    await computeGraphClusters(req.user.id);
+    res.json({ success: true, message: 'Graph clustering computed successfully' });
+  } catch (error: any) {
+    logger.error('Failed to trigger graph clustering:', error);
+    res.status(500).json({ success: false, error: { code: 'CLUSTER_FAILED', message: error.message } });
+  }
+});
 
 /**
  * GET /api/graph/nodes
@@ -28,7 +49,7 @@ graphRouter.get('/nodes', async (req: Request, res: Response) => {
       return;
     }
 
-    const [nodes, documents] = await Promise.all([
+    const [nodes, documents, clusters] = await Promise.all([
       prisma.knowledgeNode.findMany({
         where: { userId: req.user.id },
         select: {
@@ -46,7 +67,26 @@ graphRouter.get('/nodes', async (req: Request, res: Response) => {
           summary: true,
         },
       }),
+      prisma.cluster.findMany({
+        where: { userId: req.user.id },
+      }),
     ]);
+
+    // Build document ID to cluster map
+    const docClusterMap = new Map<string, { label: string; color: string }>();
+    for (const cl of clusters) {
+      let docIds: string[] = [];
+      try {
+        docIds = Array.isArray(cl.documentIds)
+          ? (cl.documentIds as string[])
+          : JSON.parse(cl.documentIds as string);
+      } catch (e) {
+        docIds = [];
+      }
+      for (const id of docIds) {
+        docClusterMap.set(id, { label: cl.label, color: cl.color || '#9b6fe0' });
+      }
+    }
 
     // Build node objects for the graph visualization
     const conceptNodes = nodes.map(node => ({
@@ -55,15 +95,22 @@ graphRouter.get('/nodes', async (req: Request, res: Response) => {
       type: node.type,
       description: node.description,
       size: 1,
+      clusterLabel: 'Entity',
+      color: '#c3c0ff', // default primary tint
     }));
 
-    const documentNodes = documents.map(doc => ({
-      id: doc.id,
-      label: doc.title,
-      type: 'OTHER',
-      description: doc.summary ?? 'No summary available.',
-      size: 2,
-    }));
+    const documentNodes = documents.map(doc => {
+      const cluster = docClusterMap.get(doc.id);
+      return {
+        id: doc.id,
+        label: doc.title,
+        type: 'OTHER',
+        description: doc.summary ?? 'No summary available.',
+        size: 2,
+        clusterLabel: cluster?.label ?? 'General',
+        color: cluster?.color ?? '#999',
+      };
+    });
 
     const graphNodes = [...conceptNodes, ...documentNodes];
 

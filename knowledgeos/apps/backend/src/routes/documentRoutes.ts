@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { jwtMiddleware } from '../auth/jwtMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
+import { getLLMProvider } from '../services/llm/llmProvider.js';
 
 export const documentRouter = Router();
 
@@ -29,6 +30,7 @@ const listQuerySchema = z.object({
   status: z.enum(['PENDING', 'PROCESSING', 'INDEXED', 'FAILED']).optional(),
   fileType: z.enum(['PDF', 'TXT', 'MD', 'IMAGE', 'VIDEO', 'OTHER']).optional(),
   search: z.string().optional(),
+  spaceId: z.string().optional(),
   sortBy: z.enum(['createdAt', 'title', 'lastAccessedAt', 'readingTimeMinutes']).default('createdAt'),
   sortDir: z.enum(['asc', 'desc']).default('desc'),
 });
@@ -49,13 +51,16 @@ documentRouter.get('/', async (req: Request, res: Response) => {
       return;
     }
 
-    const { page, limit, status, fileType, search, sortBy, sortDir } = parsed.data;
+    const { page, limit, status, fileType, search, spaceId, sortBy, sortDir } = parsed.data;
     const skip = (page - 1) * limit;
 
     // Build where clause
     const where: Record<string, unknown> = { userId: req.user.id };
     if (status) where['status'] = status;
     if (fileType) where['fileType'] = fileType;
+    if (spaceId) {
+      where['spaceId'] = spaceId === 'personal' ? null : spaceId;
+    }
     if (search) {
       where['OR'] = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -218,6 +223,108 @@ documentRouter.get('/:id', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: { code: 'GET_FAILED', message: 'Failed to get document' },
+    });
+  }
+});
+
+/**
+ * POST /api/documents/compare
+ * Compare multiple documents side-by-side.
+ */
+documentRouter.post('/compare', async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+
+    const { documentIds } = req.body as { documentIds: string[] };
+
+    if (!Array.isArray(documentIds) || documentIds.length < 2) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'At least two documentIds are required for comparison' },
+      });
+      return;
+    }
+
+    // Fetch documents
+    const docs = await prisma.document.findMany({
+      where: {
+        id: { in: documentIds },
+        userId: req.user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        summary: true,
+        fileType: true,
+      },
+    });
+
+    if (docs.length < 2) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Could not find two or more matching documents' },
+      });
+      return;
+    }
+
+    // Build context for LLM
+    const docContexts = docs.map((doc, idx) => {
+      return `Document ${idx + 1} (ID: ${doc.id}):\nTitle: ${doc.title}\nFormat: ${doc.fileType}\nSummary: ${doc.summary || 'No summary available.'}`;
+    }).join('\n\n');
+
+    const prompt = `You are a Senior Systems Architect and Technical Analyst. Compare the following documents.
+Format the response as a single, valid JSON object matching the following structure:
+{
+  "comparisonMatrix": [
+    { "category": "Topic", "docValues": ["Doc 1 Topic", "Doc 2 Topic"] },
+    { "category": "Core Concepts", "docValues": ["Doc 1 Concepts", "Doc 2 Concepts"] },
+    { "category": "Key Summary", "docValues": ["Doc 1 Summary", "Doc 2 Summary"] }
+  ],
+  "similarities": ["Sim 1", "Sim 2"],
+  "differences": ["Diff 1", "Diff 2"],
+  "contradictions": ["Contradiction 1 or State None"]
+}
+
+Make sure the "docValues" array matches the order of the documents provided.
+Provide detailed descriptions for the docValues.
+
+Documents to Compare:
+${docContexts}
+
+JSON Output:`;
+
+    const provider = getLLMProvider();
+    const rawResult = await provider.generate(prompt, 'You are a technical analyst that outputs ONLY raw JSON arrays/objects. Do not include markdown code block formatting.');
+
+    let comparisons = {
+      comparisonMatrix: [],
+      similarities: [],
+      differences: [],
+      contradictions: [],
+    };
+
+    try {
+      const cleaned = rawResult.replace(/```json/g, '').replace(/```/g, '').trim();
+      comparisons = JSON.parse(cleaned);
+    } catch (e) {
+      logger.error('Failed to parse document comparisons JSON from LLM: ' + rawResult);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        documents: docs.map(d => ({ id: d.id, title: d.title })),
+        comparisons,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Compare documents failed:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'COMPARE_FAILED', message: error.message },
     });
   }
 });

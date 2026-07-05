@@ -21,6 +21,14 @@ import { graphRouter } from './routes/graphRoutes.js';
 import { recommendationRouter } from './routes/recommendationRoutes.js';
 import { revisionRouter } from './routes/revisionRoutes.js';
 import { llmRouter } from './routes/llmRoutes.js';
+import { gapRouter } from './routes/gapRoutes.js';
+import { roadmapRouter } from './routes/roadmapRoutes.js';
+import { researchRouter } from './routes/researchRoutes.js';
+import { heatmapRouter } from './routes/heatmapRoutes.js';
+import { mentorRouter } from './routes/mentorRoutes.js';
+import { spaceRouter } from './routes/spaceRoutes.js';
+import { workflowRouter } from './routes/workflowRoutes.js';
+import { docConversationRouter } from './routes/docConversationRoutes.js';
 import { initializeProcessingQueue } from './queues/processingQueue.js';
 import { startDriveWatcher } from './services/driveWatcher.js';
 import { logger } from './utils/logger.js';
@@ -106,6 +114,14 @@ app.use('/api/graph', graphRouter);
 app.use('/api/recommendations', recommendationRouter);
 app.use('/api/revision', revisionRouter);
 app.use('/api/llm', llmRouter);
+app.use('/api', gapRouter);
+app.use('/api/roadmaps', roadmapRouter);
+app.use('/api/research', researchRouter);
+app.use('/api', heatmapRouter);
+app.use('/api/mentor', mentorRouter);
+app.use('/api/spaces', spaceRouter);
+app.use('/api', workflowRouter);
+app.use('/api/documents', docConversationRouter);
 
 // ─── 404 Handler ───
 
