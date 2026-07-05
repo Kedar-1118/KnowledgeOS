@@ -41,12 +41,6 @@ export default function UploadModal() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(e.dataTransfer.files)
       addFiles(droppedFiles)
-      // Process files sequentially or in parallel
-      droppedFiles.forEach((file, idx) => {
-        // We will match the files by index to trigger upload
-        // In useUploadStore.addFiles, it appends them to files queue.
-        // We trigger upload processing via useEffect or direct function calls.
-      })
     }
   }
 

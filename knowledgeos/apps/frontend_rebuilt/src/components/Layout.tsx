@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import UploadModal from './UploadModal'
+import CommandPalette from './CommandPalette'
 import { useAuthStore } from '../store/authStore'
 
 export default function Layout() {
@@ -10,6 +11,7 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-on-surface overflow-x-hidden font-display">
       <Sidebar />
       <UploadModal />
+      <CommandPalette />
 
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] radial-glow opacity-60" />
