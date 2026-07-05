@@ -128,8 +128,9 @@ roadmapRouter.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
+    const roadmapId = req.params['id'] as string;
     const roadmap = await prisma.learningRoadmap.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: roadmapId, userId: req.user.id },
       include: {
         nodes: {
           orderBy: { order: 'asc' },
@@ -161,7 +162,7 @@ roadmapRouter.patch('/nodes/:nodeId', async (req: Request, res: Response) => {
     }
 
     const { status } = req.body as { status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' };
-    const { nodeId } = req.params;
+    const nodeId = req.params['nodeId'] as string;
 
     // Verify node belongs to user's roadmap
     const node = await prisma.roadmapNode.findFirst({
@@ -199,8 +200,9 @@ roadmapRouter.delete('/:id', async (req: Request, res: Response) => {
       return;
     }
 
+    const roadmapId = req.params['id'] as string;
     const roadmap = await prisma.learningRoadmap.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: roadmapId, userId: req.user.id },
     });
 
     if (!roadmap) {

@@ -11,6 +11,11 @@ import RecommendationsPage from './pages/RecommendationsPage'
 import RevisionPage from './pages/RevisionPage'
 import SettingsPage from './pages/SettingsPage'
 import StatusPage from './pages/StatusPage'
+import RoadmapsPage from './pages/RoadmapsPage'
+import MentorPage from './pages/MentorPage'
+import ResearchPage from './pages/ResearchPage'
+import ComparePage from './pages/ComparePage'
+import AnalyticsPage from './pages/AnalyticsPage'
 import { useAuthStore } from './store/authStore'
 
 function AuthCallback() {
@@ -92,6 +97,11 @@ export default function App() {
         <Route path="graph" element={<GraphPage />} />
         <Route path="recommendations" element={<RecommendationsPage />} />
         <Route path="revision" element={<RevisionPage />} />
+        <Route path="roadmaps" element={<RoadmapsPage />} />
+        <Route path="mentor" element={<MentorPage />} />
+        <Route path="research" element={<ResearchPage />} />
+        <Route path="compare" element={<ComparePage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="status" element={<StatusPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
