@@ -13,7 +13,7 @@ import time
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue, MatchAny
 
 from models.embedder import embed_single
 from schemas.requests import SearchRequest, SearchResponse, SearchResultItem, TagResult
@@ -49,7 +49,7 @@ async def search(request: SearchRequest) -> SearchResponse:
 
     Steps:
     1. Encode query → 384-dim vector
-    2. Search Qdrant with userId filter
+    2. Search Qdrant collections with documentIds filters
     3. Merge with BM25 candidates from backend (if provided)
     4. Re-rank with cross-encoder
     5. Calculate hybrid weighted scores and explanations (BM25, Vector, CE)
@@ -62,27 +62,45 @@ async def search(request: SearchRequest) -> SearchResponse:
 
         # Step 1: Vector Search in Qdrant
         query_embedding = embed_single(request.query)
-        collection_name = get_user_collection_name(request.user_id)
-        must_conditions: list[FieldCondition] = [
-            FieldCondition(key="userId", match=MatchValue(value=request.user_id))
-        ]
-        qdrant_filter = Filter(must=must_conditions)
-
         client = get_qdrant_client()
         search_limit = min(request.top_k * 3, 50)
 
+        # Build list of collections to query
+        queries_to_run = []
+        if request.user_document_map:
+            for t_user_id, t_doc_ids in request.user_document_map.items():
+                if not t_doc_ids:
+                    continue
+                col_name = get_user_collection_name(t_user_id)
+                try:
+                    # Check if collection exists
+                    client.get_collection(col_name)
+                    filter_conds = [
+                        FieldCondition(key="documentId", match=MatchAny(any=t_doc_ids))
+                    ]
+                    queries_to_run.append((col_name, Filter(must=filter_conds)))
+                except Exception:
+                    continue
+        else:
+            col_name = get_user_collection_name(request.user_id)
+            must_conditions = [
+                FieldCondition(key="userId", match=MatchValue(value=request.user_id))
+            ]
+            queries_to_run.append((col_name, Filter(must=must_conditions)))
+
         vector_hits = []
-        try:
-            response = client.query_points(
-                collection_name=collection_name,
-                query=query_embedding.tolist(),
-                query_filter=qdrant_filter,
-                limit=search_limit,
-                with_payload=True,
-            )
-            vector_hits = response.points
-        except Exception as e:
-            logger.warning(f"Qdrant vector search failed (using empty vector results): {e}")
+        for col_name, qdrant_filter in queries_to_run:
+            try:
+                response = client.query_points(
+                    collection_name=col_name,
+                    query=query_embedding.tolist(),
+                    query_filter=qdrant_filter,
+                    limit=search_limit,
+                    with_payload=True,
+                )
+                vector_hits.extend(response.points)
+            except Exception as e:
+                logger.warning(f"Qdrant vector search failed for collection {col_name}: {e}")
 
         # Step 2: Build candidate map combining Vector and BM25 results
         candidates: dict[str, dict] = {}

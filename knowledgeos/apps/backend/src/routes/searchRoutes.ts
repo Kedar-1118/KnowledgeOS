@@ -48,42 +48,98 @@ searchRouter.post('/search', async (req: Request, res: Response) => {
       return;
     }
 
-    // Run PostgreSQL full-text search to get BM25 candidates
-    let bm25Results: Array<{ chunkId: string; content: string; score: number; documentId: string }> = [];
-    try {
-      const dbCandidates = await prisma.$queryRaw<Array<{
-        id: string;
-        documentId: string;
-        content: string;
-        rank: number;
-      }>>`
-        SELECT id, "documentId", content, ts_rank_cd(to_tsvector('english', content), websearch_to_tsquery('english', ${query})) as rank
-        FROM chunks
-        WHERE "documentId" IN (
-          SELECT id FROM documents WHERE "userId" = ${req.user.id} AND status = 'INDEXED'
-        )
-        AND to_tsvector('english', content) @@ websearch_to_tsquery('english', ${query})
-        ORDER BY rank DESC
-        LIMIT 50
-      `;
+    // 1. Resolve accessible document IDs and group them by owner userId
+    const userSpaces = await prisma.spaceMember.findMany({
+      where: { userId: req.user.id },
+      select: { spaceId: true },
+    });
+    const spaceIds = userSpaces.map(s => s.spaceId).filter(Boolean);
 
-      bm25Results = (dbCandidates || []).map(c => ({
-        chunkId: c.id,
-        content: c.content,
-        score: Number(c.rank || 0.0),
-        documentId: c.documentId,
-      }));
-    } catch (err) {
-      logger.warn('Postgres full-text search failed (falling back to vector search only):', err);
+    let docWhereClause: any = {
+      OR: [
+        { userId: req.user.id },
+        { spaceId: { in: spaceIds } },
+      ],
+      status: 'INDEXED',
+    };
+
+    // Apply space filter if present
+    const filterSpaceId = filters?.spaceId as string | undefined;
+    if (filterSpaceId) {
+      if (filterSpaceId === 'personal') {
+        docWhereClause = {
+          userId: req.user.id,
+          spaceId: null,
+          status: 'INDEXED',
+        };
+      } else {
+        if (!spaceIds.includes(filterSpaceId)) {
+          res.status(403).json({
+            success: false,
+            error: { code: 'FORBIDDEN', message: 'You do not have access to this space' },
+          });
+          return;
+        }
+        docWhereClause = {
+          spaceId: filterSpaceId,
+          status: 'INDEXED',
+        };
+      }
     }
 
-    // Forward to ML service with BM25 candidates
+    const docs = await prisma.document.findMany({
+      where: docWhereClause,
+      select: { id: true, userId: true },
+    });
+
+    const accessibleDocIds = docs.map(d => d.id);
+
+    // Group document IDs by owner userId
+    const userDocumentMap: Record<string, string[]> = {};
+    for (const doc of docs) {
+      if (!userDocumentMap[doc.userId]) {
+        userDocumentMap[doc.userId] = [];
+      }
+      userDocumentMap[doc.userId]!.push(doc.id);
+    }
+
+    // Run PostgreSQL full-text search to get BM25 candidates
+    let bm25Results: Array<{ chunkId: string; content: string; score: number; documentId: string }> = [];
+    if (accessibleDocIds.length > 0) {
+      try {
+        const dbCandidates = await prisma.$queryRaw<Array<{
+          id: string;
+          documentId: string;
+          content: string;
+          rank: number;
+        }>>`
+          SELECT id, "documentId", content, ts_rank_cd(to_tsvector('english', content), websearch_to_tsquery('english', ${query})) as rank
+          FROM chunks
+          WHERE "documentId" = ANY(${accessibleDocIds})
+          AND to_tsvector('english', content) @@ websearch_to_tsquery('english', ${query})
+          ORDER BY rank DESC
+          LIMIT 50
+        `;
+
+        bm25Results = (dbCandidates || []).map(c => ({
+          chunkId: c.id,
+          content: c.content,
+          score: Number(c.rank || 0.0),
+          documentId: c.documentId,
+        }));
+      } catch (err) {
+        logger.warn('Postgres full-text search failed (falling back to vector search only):', err);
+      }
+    }
+
+    // Forward to ML service with BM25 candidates and userDocumentMap
     const mlResponse = await axios.post(`${ML_SERVICE_URL}/ml/search`, {
       query,
       userId: req.user.id,
       topK: topK ?? 10,
       filters,
       bm25Results,
+      userDocumentMap,
     });
 
     const searchData = mlResponse.data as {
@@ -201,6 +257,32 @@ searchRouter.post('/qa', async (req: Request, res: Response) => {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    // 1. Resolve accessible document IDs and group them by owner userId
+    const userSpacesForQA = await prisma.spaceMember.findMany({
+      where: { userId: req.user.id },
+      select: { spaceId: true },
+    });
+    const spaceIdsForQA = userSpacesForQA.map(s => s.spaceId).filter(Boolean);
+
+    const docsForQA = await prisma.document.findMany({
+      where: {
+        OR: [
+          { userId: req.user.id },
+          { spaceId: { in: spaceIdsForQA } },
+        ],
+        status: 'INDEXED',
+      },
+      select: { id: true, userId: true },
+    });
+
+    const userDocumentMapForQA: Record<string, string[]> = {};
+    for (const doc of docsForQA) {
+      if (!userDocumentMapForQA[doc.userId]) {
+        userDocumentMapForQA[doc.userId] = [];
+      }
+      userDocumentMapForQA[doc.userId]!.push(doc.id);
+    }
+
     // Forward to ML service and stream response
     const mlResponse = await axios.post(
       `${ML_SERVICE_URL}/ml/qa`,
@@ -208,6 +290,7 @@ searchRouter.post('/qa', async (req: Request, res: Response) => {
         question,
         userId: req.user.id,
         topK: topK ?? 5,
+        userDocumentMap: userDocumentMapForQA,
       },
       { responseType: 'stream' },
     );

@@ -18,7 +18,7 @@ from loguru import logger
 from models.embedder import embed_single
 from schemas.requests import QARequest, QASource
 from utils.qdrant_client import get_qdrant_client, get_user_collection_name
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue, MatchAny
 
 router = APIRouter()
 
@@ -30,30 +30,55 @@ Always cite your sources using [Source N] notation where N is the source number.
 Be concise, accurate, and helpful."""
 
 
-async def _stream_qa_response(question: str, user_id: str, top_k: int):
+async def _stream_qa_response(question: str, user_id: str, top_k: int, user_document_map: dict[str, list[str]] | None):
     """Generator that streams the Q&A response as SSE events."""
 
     # Step 1: Retrieve relevant chunks
     query_embedding = embed_single(question)
-    collection_name = get_user_collection_name(user_id)
     client = get_qdrant_client()
 
-    try:
-        response = client.query_points(
-            collection_name=collection_name,
-            query=query_embedding.tolist(),
-            query_filter=Filter(
-                must=[FieldCondition(key="userId", match=MatchValue(value=user_id))]
-            ),
-            limit=top_k,
-            with_payload=True,
-        )
-        search_results = response.points
-    except Exception as e:
-        logger.warning(f"Qdrant search failed for QA: {e}")
-        error_data = json.dumps({"error": "No documents indexed yet. Please sync your Drive first."})
-        yield f"data: {error_data}\n\n"
-        return
+    # Build list of collections to query
+    queries_to_run = []
+    if user_document_map:
+        for t_user_id, t_doc_ids in user_document_map.items():
+            if not t_doc_ids:
+                continue
+            col_name = get_user_collection_name(t_user_id)
+            try:
+                client.get_collection(col_name)
+                filter_conds = [
+                    FieldCondition(key="documentId", match=MatchAny(any=t_doc_ids))
+                ]
+                queries_to_run.append((col_name, Filter(must=filter_conds)))
+            except Exception:
+                continue
+    else:
+        col_name = get_user_collection_name(user_id)
+        queries_to_run.append((
+            col_name,
+            Filter(must=[FieldCondition(key="userId", match=MatchValue(value=user_id))])
+        ))
+
+    search_results = []
+    for col_name, q_filter in queries_to_run:
+        try:
+            response = client.query_points(
+                collection_name=col_name,
+                query=query_embedding.tolist(),
+                query_filter=q_filter,
+                limit=top_k,
+                with_payload=True,
+            )
+            search_results.extend(response.points)
+        except Exception as e:
+            logger.warning(f"Qdrant query failed for collection {col_name} during QA: {e}")
+            error_data = json.dumps({"error": f"Search failed on collection: {e}"})
+            yield f"data: {error_data}\n\n"
+            return
+
+    # Deduplicate/sort search results by score
+    search_results.sort(key=lambda x: x.score, reverse=True)
+    search_results = search_results[:top_k]
 
     if not search_results:
         error_data = json.dumps({"error": "No relevant documents found for your question."})
@@ -87,7 +112,8 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
             import httpx
 
             async with httpx.AsyncClient(timeout=60.0) as http_client:
-                response = await http_client.post(
+                async with http_client.stream(
+                    "POST",
                     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
                     headers={
                         "Authorization": f"Bearer {GEMINI_API_KEY}",
@@ -107,10 +133,9 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int):
                         ],
                         "stream": True,
                     },
-                )
-
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
+                ) as response:
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
                         data = line[6:].strip()
                         if data == "[DONE]":
                             break
@@ -190,6 +215,7 @@ async def question_answer(request: QARequest):
                 question=request.question,
                 user_id=request.user_id,
                 top_k=request.top_k,
+                user_document_map=request.user_document_map,
             ),
             media_type="text/event-stream",
             headers={

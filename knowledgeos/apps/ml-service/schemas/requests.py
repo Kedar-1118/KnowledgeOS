@@ -143,6 +143,7 @@ class SearchFilters(BaseModel):
     file_type: list[str] | None = Field(default=None, alias="fileType")
     date_range: DateRange | None = Field(default=None, alias="dateRange")
     min_score: float | None = Field(default=None, alias="minScore")
+    document_ids: list[str] | None = Field(default=None, alias="documentIds")
 
     model_config = {"populate_by_name": True}
 
@@ -163,6 +164,7 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=10, alias="topK")
     filters: SearchFilters | None = None
     bm25_results: list[BM25ResultItem] | None = Field(default=None, alias="bm25Results")
+    user_document_map: dict[str, list[str]] | None = Field(default=None, alias="userDocumentMap")
 
     model_config = {"populate_by_name": True}
 
@@ -200,6 +202,7 @@ class QARequest(BaseModel):
     question: str
     user_id: str = Field(alias="userId")
     top_k: int = Field(default=5, alias="topK")
+    user_document_map: dict[str, list[str]] | None = Field(default=None, alias="userDocumentMap")
 
     model_config = {"populate_by_name": True}
 

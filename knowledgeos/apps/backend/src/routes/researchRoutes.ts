@@ -32,33 +32,61 @@ researchRouter.post('/generate', async (req: Request, res: Response) => {
 
     const userId = req.user.id;
 
-    // 1. Search locally using hybrid search logic
+    // 1. Resolve accessible document IDs and group them by owner userId
+    const userSpaces = await prisma.spaceMember.findMany({
+      where: { userId },
+      select: { spaceId: true },
+    });
+    const spaceIds = userSpaces.map(s => s.spaceId).filter(Boolean);
+
+    const docs = await prisma.document.findMany({
+      where: {
+        OR: [
+          { userId },
+          { spaceId: { in: spaceIds } },
+        ],
+        status: 'INDEXED',
+      },
+      select: { id: true, userId: true },
+    });
+
+    const accessibleDocIds = docs.map(d => d.id);
+
+    const userDocumentMap: Record<string, string[]> = {};
+    for (const doc of docs) {
+      if (!userDocumentMap[doc.userId]) {
+        userDocumentMap[doc.userId] = [];
+      }
+      userDocumentMap[doc.userId]!.push(doc.id);
+    }
+
+    // Search locally using hybrid search logic
     // Run PostgreSQL full-text search first
     let bm25Results: any[] = [];
-    try {
-      const dbCandidates = await prisma.$queryRaw<Array<{
-        id: string;
-        documentId: string;
-        content: string;
-        rank: number;
-      }>>`
-        SELECT id, "documentId", content, ts_rank_cd(to_tsvector('english', content), websearch_to_tsquery('english', ${query})) as rank
-        FROM chunks
-        WHERE "documentId" IN (
-          SELECT id FROM documents WHERE "userId" = ${userId} AND status = 'INDEXED'
-        )
-        AND to_tsvector('english', content) @@ websearch_to_tsquery('english', ${query})
-        ORDER BY rank DESC
-        LIMIT 30
-      `;
-      bm25Results = (dbCandidates || []).map(c => ({
-        chunkId: c.id,
-        content: c.content,
-        score: Number(c.rank || 0.0),
-        documentId: c.documentId
-      }));
-    } catch (e) {
-      logger.warn('FTS failed during research lookup:', e);
+    if (accessibleDocIds.length > 0) {
+      try {
+        const dbCandidates = await prisma.$queryRaw<Array<{
+          id: string;
+          documentId: string;
+          content: string;
+          rank: number;
+        }>>`
+          SELECT id, "documentId", content, ts_rank_cd(to_tsvector('english', content), websearch_to_tsquery('english', ${query})) as rank
+          FROM chunks
+          WHERE "documentId" = ANY(${accessibleDocIds})
+          AND to_tsvector('english', content) @@ websearch_to_tsquery('english', ${query})
+          ORDER BY rank DESC
+          LIMIT 30
+        `;
+        bm25Results = (dbCandidates || []).map(c => ({
+          chunkId: c.id,
+          content: c.content,
+          score: Number(c.rank || 0.0),
+          documentId: c.documentId
+        }));
+      } catch (e) {
+        logger.warn('FTS failed during research lookup:', e);
+      }
     }
 
     // Call ML service search endpoint
@@ -68,7 +96,8 @@ researchRouter.post('/generate', async (req: Request, res: Response) => {
         query,
         userId,
         topK: 10,
-        bm25Results
+        bm25Results,
+        userDocumentMap
       });
       searchHits = mlResponse.data?.results || [];
     } catch (e) {
