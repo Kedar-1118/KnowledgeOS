@@ -36,6 +36,15 @@ class EmbedResponse(BaseModel):
     points: list[EmbedPointResult]
 
 
+class DeleteDocumentRequest(BaseModel):
+    """Request to delete a document's vectors."""
+    user_id: str = Field(alias="userId")
+    document_id: str = Field(alias="documentId")
+
+    model_config = {"populate_by_name": True}
+
+
+
 # ═══════════════════════════════════════════
 # Summarize
 # ═══════════════════════════════════════════

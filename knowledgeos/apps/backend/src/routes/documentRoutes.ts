@@ -8,11 +8,14 @@
 
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import axios from 'axios';
 
 import { jwtMiddleware } from '../auth/jwtMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { prisma } from '../utils/prisma.js';
 import { getLLMProvider } from '../services/llm/llmProvider.js';
+
+const ML_SERVICE_URL = process.env['ML_SERVICE_URL'] ?? 'http://localhost:8000';
 
 export const documentRouter = Router();
 
@@ -55,12 +58,33 @@ documentRouter.get('/', async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Record<string, unknown> = { userId: req.user.id };
+    const where: Record<string, any> = {};
     if (status) where['status'] = status;
     if (fileType) where['fileType'] = fileType;
+
     if (spaceId) {
-      where['spaceId'] = spaceId === 'personal' ? null : spaceId;
+      if (spaceId === 'personal') {
+        where['userId'] = req.user.id;
+        where['spaceId'] = null;
+      } else {
+        // Shared Space: verify membership
+        const membership = await prisma.spaceMember.findFirst({
+          where: { spaceId, userId: req.user.id },
+        });
+        if (!membership) {
+          res.status(403).json({
+            success: false,
+            error: { code: 'FORBIDDEN', message: 'You do not have access to this space' },
+          });
+          return;
+        }
+        where['spaceId'] = spaceId;
+      }
+    } else {
+      // Default: list all documents user owns
+      where['userId'] = req.user.id;
     }
+
     if (search) {
       where['OR'] = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -147,8 +171,8 @@ documentRouter.get('/:id', async (req: Request, res: Response) => {
 
     const docId = req.params['id'] as string;
 
-    const document = await prisma.document.findFirst({
-      where: { id: docId, userId: req.user.id },
+    const document = await prisma.document.findUnique({
+      where: { id: docId },
       include: {
         documentTags: {
           include: { tag: true },
@@ -183,6 +207,23 @@ documentRouter.get('/:id', async (req: Request, res: Response) => {
       res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Document not found' },
+      });
+      return;
+    }
+
+    // Verify access: owner or space member
+    let hasAccess = document.userId === req.user.id;
+    if (!hasAccess && document.spaceId) {
+      const membership = await prisma.spaceMember.findFirst({
+        where: { spaceId: document.spaceId, userId: req.user.id },
+      });
+      hasAccess = !!membership;
+    }
+
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this document' },
       });
       return;
     }
@@ -357,6 +398,17 @@ documentRouter.delete('/:id', async (req: Request, res: Response) => {
 
     // Delete from database (cascade handles chunks, tags, jobs)
     await prisma.document.delete({ where: { id: document.id } });
+
+    // Delete from Qdrant via ML service
+    try {
+      await axios.post(`${ML_SERVICE_URL}/ml/delete-document`, {
+        documentId: document.id,
+        userId: req.user.id,
+      });
+      logger.info(`Deleted Qdrant vectors for document ${document.id}`);
+    } catch (err: any) {
+      logger.warn(`Failed to clean up Qdrant vectors for document ${document.id}: ${err.message}`);
+    }
 
     logger.info(`Document deleted: ${document.title} (${document.id})`);
 
