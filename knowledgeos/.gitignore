@@ -48,6 +48,10 @@ logs/
 # Test coverage
 coverage/
 .nyc_output/
+
+# Local tools
+tools/redis/
+
 htmlcov/
 .pytest_cache/
 

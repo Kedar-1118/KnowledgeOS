@@ -136,20 +136,20 @@ async def _stream_qa_response(question: str, user_id: str, top_k: int, user_docu
                 ) as response:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
-                        data = line[6:].strip()
-                        if data == "[DONE]":
-                            break
-                        try:
-                            event = json.loads(data)
-                            choices = event.get("choices", [])
-                            if choices:
-                                delta = choices[0].get("delta", {})
-                                text = delta.get("content", "")
-                                if text:
-                                    chunk_data = json.dumps({"answer_chunk": text})
-                                    yield f"data: {chunk_data}\n\n"
-                        except json.JSONDecodeError:
-                            continue
+                            data = line[6:].strip()
+                            if data == "[DONE]":
+                                break
+                            try:
+                                event = json.loads(data)
+                                choices = event.get("choices", [])
+                                if choices:
+                                    delta = choices[0].get("delta", {})
+                                    text = delta.get("content", "")
+                                    if text:
+                                        chunk_data = json.dumps({"answer_chunk": text})
+                                        yield f"data: {chunk_data}\n\n"
+                            except json.JSONDecodeError:
+                                continue
 
         except Exception as e:
             logger.error(f"Gemini API call failed: {e}")

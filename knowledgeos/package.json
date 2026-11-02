@@ -21,6 +21,7 @@
     "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
     "docker:down": "docker-compose -f infra/docker-compose.yml down",
     "docker:logs": "docker-compose -f infra/docker-compose.yml logs -f",
+    "benchmark:redis": "node node_modules/tsx/dist/cli.mjs benchmarks/benchmark_suite.ts",
     "prisma:migrate": "npm run prisma:migrate --workspace=apps/backend",
     "prisma:generate": "npm run prisma:generate --workspace=apps/backend",
     "prisma:studio": "npm run prisma:studio --workspace=apps/backend"

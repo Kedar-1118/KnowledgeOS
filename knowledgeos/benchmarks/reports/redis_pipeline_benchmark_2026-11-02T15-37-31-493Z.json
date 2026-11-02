@@ -1,0 +1,477 @@
+{
+  "benchmarkMetadata": {
+    "timestamp": "2026-11-02T15:37:31.492Z",
+    "nodeVersion": "v24.8.0",
+    "platform": "win32",
+    "arch": "x64",
+    "redisVersion": "5.0.14.1 (jemalloc)",
+    "pipelineStages": [
+      "PARSE",
+      "EMBED",
+      "SUMMARIZE",
+      "TAG",
+      "GRAPH_EXTRACT"
+    ],
+    "documentCount": 100,
+    "totalJobs": 500
+  },
+  "primary100PdfPipeline": {
+    "totalDurationMs": 2795,
+    "baseline": {
+      "timestamp": 1793633831192,
+      "label": "0. Baseline (Clean Redis)",
+      "usedMemoryBytes": 784232,
+      "usedMemoryHuman": "765.85K",
+      "usedMemoryRssBytes": 660408,
+      "usedMemoryRssHuman": "644.93K",
+      "usedMemoryPeakBytes": 785208,
+      "usedMemoryPeakHuman": "766.80K",
+      "usedMemoryOverheadBytes": 760308,
+      "usedMemoryDatasetBytes": 23924,
+      "usedMemoryLuaBytes": 37888,
+      "fragmentationRatio": 1,
+      "totalKeys": 0
+    },
+    "queueInitMemory": {
+      "timestamp": 1793633831603,
+      "label": "1. After 5 Queues Initialized",
+      "usedMemoryBytes": 826792,
+      "usedMemoryHuman": "807.41K",
+      "usedMemoryRssBytes": 785768,
+      "usedMemoryRssHuman": "767.35K",
+      "usedMemoryPeakBytes": 1094520,
+      "usedMemoryPeakHuman": "1.00M",
+      "usedMemoryOverheadBytes": 796248,
+      "usedMemoryDatasetBytes": 30544,
+      "usedMemoryLuaBytes": 37888,
+      "fragmentationRatio": 1,
+      "totalKeys": 0
+    },
+    "finalMemory": {
+      "timestamp": 1793633835012,
+      "label": "4. Post-Completion (All 100 PDFs Indexed)",
+      "usedMemoryBytes": 1654840,
+      "usedMemoryHuman": "1.00M",
+      "usedMemoryRssBytes": 1613816,
+      "usedMemoryRssHuman": "1.00M",
+      "usedMemoryPeakBytes": 1889704,
+      "usedMemoryPeakHuman": "1.00M",
+      "usedMemoryOverheadBytes": 1023944,
+      "usedMemoryDatasetBytes": 630896,
+      "usedMemoryLuaBytes": 126976,
+      "fragmentationRatio": 1,
+      "totalKeys": 515
+    },
+    "peakRecordedBytes": 1889216,
+    "deltaPeakBytes": 1104984,
+    "deltaResidualBytes": 870608,
+    "memoryTimeline": [
+      {
+        "timestamp": 1793633831192,
+        "label": "0. Baseline (Clean Redis)",
+        "usedMemoryBytes": 784232,
+        "usedMemoryHuman": "765.85K",
+        "usedMemoryRssBytes": 660408,
+        "usedMemoryRssHuman": "644.93K",
+        "usedMemoryPeakBytes": 785208,
+        "usedMemoryPeakHuman": "766.80K",
+        "usedMemoryOverheadBytes": 760308,
+        "usedMemoryDatasetBytes": 23924,
+        "usedMemoryLuaBytes": 37888,
+        "fragmentationRatio": 1,
+        "totalKeys": 0
+      },
+      {
+        "timestamp": 1793633831603,
+        "label": "1. After 5 Queues Initialized",
+        "usedMemoryBytes": 826792,
+        "usedMemoryHuman": "807.41K",
+        "usedMemoryRssBytes": 785768,
+        "usedMemoryRssHuman": "767.35K",
+        "usedMemoryPeakBytes": 1094520,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 796248,
+        "usedMemoryDatasetBytes": 30544,
+        "usedMemoryLuaBytes": 37888,
+        "fragmentationRatio": 1,
+        "totalKeys": 0
+      },
+      {
+        "timestamp": 1793633831619,
+        "label": "2. Enqueued 25 PDFs",
+        "usedMemoryBytes": 1697176,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 785768,
+        "usedMemoryRssHuman": "767.35K",
+        "usedMemoryPeakBytes": 1697176,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1481272,
+        "usedMemoryDatasetBytes": 215904,
+        "usedMemoryLuaBytes": 114688,
+        "fragmentationRatio": 1,
+        "totalKeys": 35
+      },
+      {
+        "timestamp": 1793633831623,
+        "label": "2. Enqueued 50 PDFs",
+        "usedMemoryBytes": 1719088,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 785768,
+        "usedMemoryRssHuman": "767.35K",
+        "usedMemoryPeakBytes": 1719088,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1482016,
+        "usedMemoryDatasetBytes": 237072,
+        "usedMemoryLuaBytes": 83968,
+        "fragmentationRatio": 1,
+        "totalKeys": 60
+      },
+      {
+        "timestamp": 1793633831627,
+        "label": "2. Enqueued 75 PDFs",
+        "usedMemoryBytes": 1742024,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 785768,
+        "usedMemoryRssHuman": "767.35K",
+        "usedMemoryPeakBytes": 1742024,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1483528,
+        "usedMemoryDatasetBytes": 258496,
+        "usedMemoryLuaBytes": 122880,
+        "fragmentationRatio": 1,
+        "totalKeys": 85
+      },
+      {
+        "timestamp": 1793633831633,
+        "label": "2. Enqueued 100 PDFs",
+        "usedMemoryBytes": 1774096,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 785768,
+        "usedMemoryRssHuman": "767.35K",
+        "usedMemoryPeakBytes": 1774096,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1492224,
+        "usedMemoryDatasetBytes": 281872,
+        "usedMemoryLuaBytes": 97280,
+        "fragmentationRatio": 1,
+        "totalKeys": 117
+      },
+      {
+        "timestamp": 1793633832035,
+        "label": "3. Active Pipeline (13/100 completed)",
+        "usedMemoryBytes": 1533312,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1483920,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1786176,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1203380,
+        "usedMemoryDatasetBytes": 329932,
+        "usedMemoryLuaBytes": 117760,
+        "fragmentationRatio": 1,
+        "totalKeys": 241
+      },
+      {
+        "timestamp": 1793633832449,
+        "label": "3. Active Pipeline (29/100 completed)",
+        "usedMemoryBytes": 1631016,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1630872,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1786176,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1177120,
+        "usedMemoryDatasetBytes": 453896,
+        "usedMemoryLuaBytes": 80896,
+        "fragmentationRatio": 1,
+        "totalKeys": 359
+      },
+      {
+        "timestamp": 1793633832848,
+        "label": "3. Active Pipeline (45/100 completed)",
+        "usedMemoryBytes": 1848000,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1785488,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1848000,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1247024,
+        "usedMemoryDatasetBytes": 600976,
+        "usedMemoryLuaBytes": 138240,
+        "fragmentationRatio": 1,
+        "totalKeys": 466
+      },
+      {
+        "timestamp": 1793633833262,
+        "label": "3. Active Pipeline (61/100 completed)",
+        "usedMemoryBytes": 1889216,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1884168,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1889216,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1220564,
+        "usedMemoryDatasetBytes": 668652,
+        "usedMemoryLuaBytes": 117760,
+        "fragmentationRatio": 1,
+        "totalKeys": 518
+      },
+      {
+        "timestamp": 1793633833662,
+        "label": "3. Active Pipeline (76/100 completed)",
+        "usedMemoryBytes": 1688688,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1688184,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1889704,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1056860,
+        "usedMemoryDatasetBytes": 631828,
+        "usedMemoryLuaBytes": 153600,
+        "fragmentationRatio": 1,
+        "totalKeys": 518
+      },
+      {
+        "timestamp": 1793633834062,
+        "label": "3. Active Pipeline (89/100 completed)",
+        "usedMemoryBytes": 1693352,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1651088,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1889704,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1056860,
+        "usedMemoryDatasetBytes": 636492,
+        "usedMemoryLuaBytes": 100352,
+        "fragmentationRatio": 1,
+        "totalKeys": 518
+      },
+      {
+        "timestamp": 1793633835012,
+        "label": "4. Post-Completion (All 100 PDFs Indexed)",
+        "usedMemoryBytes": 1654840,
+        "usedMemoryHuman": "1.00M",
+        "usedMemoryRssBytes": 1613816,
+        "usedMemoryRssHuman": "1.00M",
+        "usedMemoryPeakBytes": 1889704,
+        "usedMemoryPeakHuman": "1.00M",
+        "usedMemoryOverheadBytes": 1023944,
+        "usedMemoryDatasetBytes": 630896,
+        "usedMemoryLuaBytes": 126976,
+        "fragmentationRatio": 1,
+        "totalKeys": 515
+      }
+    ],
+    "queueBreakdowns": [
+      {
+        "queueName": "parse",
+        "totalMemoryBytes": 108394,
+        "keyCount": 103,
+        "breakdown": {
+          "jobHashes": 0,
+          "completedZSet": 3873,
+          "activeSet": 0,
+          "waitList": 0,
+          "idCounter": 55,
+          "other": 104466
+        }
+      },
+      {
+        "queueName": "embed",
+        "totalMemoryBytes": 108394,
+        "keyCount": 103,
+        "breakdown": {
+          "jobHashes": 0,
+          "completedZSet": 3873,
+          "activeSet": 0,
+          "waitList": 0,
+          "idCounter": 55,
+          "other": 104466
+        }
+      },
+      {
+        "queueName": "summarize",
+        "totalMemoryBytes": 110306,
+        "keyCount": 103,
+        "breakdown": {
+          "jobHashes": 0,
+          "completedZSet": 4277,
+          "activeSet": 0,
+          "waitList": 0,
+          "idCounter": 59,
+          "other": 105970
+        }
+      },
+      {
+        "queueName": "tag",
+        "totalMemoryBytes": 107388,
+        "keyCount": 103,
+        "breakdown": {
+          "jobHashes": 0,
+          "completedZSet": 3671,
+          "activeSet": 0,
+          "waitList": 0,
+          "idCounter": 53,
+          "other": 103664
+        }
+      },
+      {
+        "queueName": "graph-extract",
+        "totalMemoryBytes": 112220,
+        "keyCount": 103,
+        "breakdown": {
+          "jobHashes": 0,
+          "completedZSet": 4681,
+          "activeSet": 0,
+          "waitList": 0,
+          "idCounter": 63,
+          "other": 107476
+        }
+      }
+    ],
+    "stageStats": {
+      "PARSE": {
+        "count": 100,
+        "min": 11,
+        "max": 30,
+        "mean": 20.69,
+        "p50": 18,
+        "p90": 29,
+        "p95": 29,
+        "p99": 30
+      },
+      "EMBED": {
+        "count": 100,
+        "min": 14,
+        "max": 33,
+        "mean": 26.65,
+        "p50": 28,
+        "p90": 29,
+        "p95": 30,
+        "p99": 33
+      },
+      "SUMMARIZE": {
+        "count": 100,
+        "min": 26,
+        "max": 42,
+        "mean": 28.93,
+        "p50": 29,
+        "p90": 30,
+        "p95": 30,
+        "p99": 42
+      },
+      "TAG": {
+        "count": 100,
+        "min": 11,
+        "max": 30,
+        "mean": 17.15,
+        "p50": 14,
+        "p90": 28,
+        "p95": 28,
+        "p99": 30
+      },
+      "GRAPH_EXTRACT": {
+        "count": 100,
+        "min": 14,
+        "max": 31,
+        "mean": 25.97,
+        "p50": 29,
+        "p90": 30,
+        "p95": 30,
+        "p99": 31
+      }
+    },
+    "e2eStats": {
+      "count": 100,
+      "min": 116,
+      "max": 2766,
+      "mean": 1375.9,
+      "p50": 1362,
+      "p90": 2490,
+      "p95": 2645,
+      "p99": 2766
+    }
+  },
+  "retentionPolicyBenchmark": [
+    {
+      "policy": "Strict Purge (removeOnComplete: true)",
+      "baselineBytes": 749832,
+      "afterBytes": 813848,
+      "deltaBytes": 64016,
+      "deltaKb": 62.52,
+      "totalKeys": 2
+    },
+    {
+      "policy": "KnowledgeOS Default (removeOnComplete: 100)",
+      "baselineBytes": 749872,
+      "afterBytes": 910920,
+      "deltaBytes": 161048,
+      "deltaKb": 157.27,
+      "totalKeys": 103
+    },
+    {
+      "policy": "Unbounded Retention (removeOnComplete: false)",
+      "baselineBytes": 749872,
+      "afterBytes": 910920,
+      "deltaBytes": 161048,
+      "deltaKb": 157.27,
+      "totalKeys": 103
+    }
+  ],
+  "payloadSensitivityBenchmark": [
+    {
+      "scenario": "Lean ID References (KnowledgeOS Pattern: ~150 Bytes)",
+      "baselineKb": 732.3,
+      "finalKb": 890.31,
+      "deltaBytes": 161808,
+      "deltaKb": 158.02,
+      "perJobBytes": 1618
+    },
+    {
+      "scenario": "Medium Payload (Document Metadata + Headers: ~2 KB)",
+      "baselineKb": 732.27,
+      "finalKb": 918.44,
+      "deltaBytes": 190640,
+      "deltaKb": 186.17,
+      "perJobBytes": 1906
+    },
+    {
+      "scenario": "Heavy Anti-Pattern (Raw Chunks inside Redis Job: ~32 KB)",
+      "baselineKb": 732.27,
+      "finalKb": 4080.94,
+      "deltaBytes": 3429040,
+      "deltaKb": 3348.67,
+      "perJobBytes": 34290
+    }
+  ],
+  "concurrencyBenchmark": [
+    {
+      "concurrency": 1,
+      "durationMs": 2830,
+      "throughputJobsPerSec": 35.34,
+      "peakMemoryKb": 4120.49,
+      "deltaKb": 152.14
+    },
+    {
+      "concurrency": 2,
+      "durationMs": 1334,
+      "throughputJobsPerSec": 74.96,
+      "peakMemoryKb": 4120.49,
+      "deltaKb": 150.86
+    },
+    {
+      "concurrency": 5,
+      "durationMs": 548,
+      "throughputJobsPerSec": 182.48,
+      "peakMemoryKb": 4120.49,
+      "deltaKb": 151.01
+    },
+    {
+      "concurrency": 10,
+      "durationMs": 256,
+      "throughputJobsPerSec": 390.63,
+      "peakMemoryKb": 4120.49,
+      "deltaKb": 151.42
+    }
+  ]
+}
